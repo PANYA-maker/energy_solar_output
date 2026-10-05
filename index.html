@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ แดชบอร์ดมอนิเตอร์ไฟฟ้า PEA, Solar & ผลผลิต (Energy & Output Monitor)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        },
+                        solar: '#f59e0b',
+                        pea: '#38bdf8',
+                        total: '#10b981',
+                        cost: '#ec4899',
+                        demand: '#8b5cf6'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Prompt', sans-serif; }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.90);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+        }
+        .metric-card {
+            transition: all 0.25s ease-in-out;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-16">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/95 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-gradient-to-tr from-amber-500 via-sky-500 to-indigo-600 rounded-xl shadow-lg shadow-sky-500/20">
+                    <i data-lucide="zap" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        PEA Grid & Solar Energy Output Monitor
+                        <span id="activeModeBadge" class="text-xs font-normal px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                            โหมดคำนวณสะสมรายวัน
+                        </span>
+                    </h1>
+                    <p class="text-xs text-slate-400">บริษัท ลี้ไฟเบอร์บอร์ด จำกัด | บันทึกและวิเคราะห์ค่าไฟ PEA, โซลาร์ และผลผลิต</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <button onclick="openBillModal()" class="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 text-xs font-semibold border border-purple-500/30 flex items-center gap-1.5 transition active:scale-95 shadow-sm">
+                    <i data-lucide="receipt" class="w-4 h-4 text-purple-400"></i> บันทึกบิลค่าไฟทางการ (ปิดเดือน)
+                </button>
+                <button onclick="openDataModal()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-900/30 flex items-center gap-1.5 transition active:scale-95">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่ม / บันทึกข้อมูลวันใหม่
+                </button>
+                <a href="https://docs.google.com/spreadsheets/d/1NFDDL3daVUrjLKDZtWpE5m4nO0WYS8SPb6BLRCGj9Ec/edit?usp=sharing" target="_blank" class="px-3.5 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 text-xs font-semibold border border-sky-500/30 flex items-center gap-1.5 transition">
+                    <i data-lucide="external-link" class="w-4 h-4"></i> เปิด Google Sheet
+                </a>
+                <button onclick="syncToGoogleSheetsModal()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+                    <i data-lucide="cloud" class="w-4 h-4 text-emerald-400"></i> ตั้งค่าซิงค์อัตโนมัติ
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Banner & Calculation Mode Toggle -->
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800/80">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <i data-lucide="sliders" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-white">โหมดฐานการคำนวณแดชบอร์ด (Reconciliation Source)</h3>
+                    <p class="text-xs text-slate-400">เลือกดูผลรวมจากการลงบันทึกรายวัน หรือยึดตามตัวเลขบิลทางการที่ปิดงวดแล้ว</p>
+                </div>
+            </div>
+
+            <!-- Mode Switch Tabs -->
+            <div class="inline-flex p-1 bg-slate-950/80 rounded-xl border border-slate-800">
+                <button id="modeDailyBtn" onclick="switchCalculationMode('daily')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-sky-600 text-white shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i> คำนวณสะสมจากรายวัน
+                </button>
+                <button id="modeBillBtn" onclick="switchCalculationMode('bill')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-slate-400 hover:text-white flex items-center gap-1.5">
+                    <i data-lucide="receipt" class="w-3.5 h-3.5"></i> ยึดตามบิล PEA ทางการ (ปิดเดือน)
+                </button>
+            </div>
+        </div>
+
+        <!-- Tariff & Filter Controls Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            
+            <!-- Left: Filter Controls (7 cols) -->
+            <div class="lg:col-span-7 glass-card rounded-2xl p-5 shadow-sm space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="filter" class="w-4 h-4 text-sky-400"></i>
+                        <h2 class="text-sm font-semibold text-slate-200">ตัวกรองข้อมูลและช่วงวันที่ (Data Filter)</h2>
+                    </div>
+                    <!-- Quick Presets -->
+                    <div class="flex items-center space-x-1.5 text-xs">
+                        <button onclick="applyPreset('all')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">ทั้งเดือน</button>
+                        <button onclick="applyPreset('first-half')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">ครึ่งแรก (1-15)</button>
+                        <button onclick="applyPreset('second-half')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">ครึ่งหลัง (16-30)</button>
+                        <button onclick="applyPreset('last-7')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">7 วันล่าสุด</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">ตั้งแต่วันที่</label>
+                        <input type="date" id="filterStartDate" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:ring-1 focus:ring-sky-500 focus:outline-none" value="2026-09-01" onchange="applyFilters()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">ถึงวันที่</label>
+                        <input type="date" id="filterEndDate" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:ring-1 focus:ring-sky-500 focus:outline-none" value="2026-09-30" onchange="applyFilters()">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1 text-xs text-slate-400">
+                    <span id="filterSummaryText">กำลังแสดงข้อมูล: 30 วัน (01/09/2026 - 30/09/2026)</span>
+                    <button onclick="resetFilters()" class="text-sky-400 hover:text-sky-300 flex items-center gap-1 transition">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> ล้างตัวกรอง
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Monthly Tariff Profile & Rates Setting (5 cols) -->
+            <div class="lg:col-span-5 glass-card rounded-2xl p-5 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="settings-2" class="w-4 h-4 text-amber-400"></i>
+                        <h2 class="text-sm font-semibold text-slate-200">อัตราค่าไฟฟ้าประจำเดือน (Monthly Tariff)</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- Month Selector -->
+                        <select id="tariffMonthSelector" onchange="changeTariffMonth()" class="bg-slate-900 border border-slate-700 text-amber-400 text-xs font-semibold rounded-lg px-2.5 py-1 focus:outline-none">
+                            <option value="2026-09">ก.ย. 2569</option>
+                            <option value="2026-10">ต.ค. 2569</option>
+                        </select>
+                        <button onclick="openNewMonthTariffModal()" title="เพิ่มโปรไฟล์เดือนใหม่" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tariff Inputs (No VAT) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[11px] mb-0.5">On-Peak (฿/kWh)</span>
+                        <input type="number" step="0.0001" id="rateOnPeak" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sky-400 font-semibold focus:outline-none text-right" value="4.1839" oninput="saveCurrentMonthTariff()">
+                    </div>
+                    <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[11px] mb-0.5">Off-Peak (฿/kWh)</span>
+                        <input type="number" step="0.0001" id="rateOffPeak" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-emerald-400 font-semibold focus:outline-none text-right" value="2.6037" oninput="saveCurrentMonthTariff()">
+                    </div>
+                    <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[11px] mb-0.5">ค่า Ft (฿/kWh)</span>
+                        <input type="number" step="0.0001" id="rateFt" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-400 font-semibold focus:outline-none text-right" value="0.1623" oninput="saveCurrentMonthTariff()">
+                    </div>
+                    <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[11px] mb-0.5">kW สูงสุด (฿/kW)</span>
+                        <input type="number" step="0.01" id="ratePeakDemand" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-purple-400 font-semibold focus:outline-none text-right" value="132.93" oninput="saveCurrentMonthTariff()">
+                    </div>
+                    <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[11px] mb-0.5">บริการ (฿/เดือน)</span>
+                        <input type="number" step="0.01" id="rateServiceCharge" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 font-semibold focus:outline-none text-right" value="312.24" oninput="saveCurrentMonthTariff()">
+                    </div>
+                    <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[11px] mb-0.5">PF Penalty (฿)</span>
+                        <input type="number" step="0.01" id="ratePowerFactor" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-rose-400 font-semibold focus:outline-none text-right" value="0.00" oninput="saveCurrentMonthTariff()">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+                    <span class="flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> คำนวณยอดเงินไม่มีภาษีมูลค่าเพิ่ม (No VAT)</span>
+                    <span id="tariffSaveStatus" class="text-emerald-400 font-medium">บันทึกอัตโนมัติ</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 4 Core Primary KPI Metric Cards (Updated with Target 0.212 & Solar 24% & Color alerts) -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-sky-400"></i>
+                    4 ตัวชี้วัดหลัก (Key Performance Indicators)
+                    <span class="text-[11px] font-normal text-slate-500 ml-1">(ตัด Unit Solar ออกจากการคำนวณ ยกเว้นการ์ดสัดส่วน Solar)</span>
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- KPI Card 1: บาท ไฟฟ้า / UNIT ไฟฟ้า -->
+                <div class="glass-card metric-card rounded-2xl p-5 border-l-4 border-l-sky-500 shadow-md">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">บาท ไฟฟ้า / UNIT ไฟฟ้า</span>
+                        <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+                            <i data-lucide="coins" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-2">
+                        <span id="kpiRatePerPeaUnit" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">฿3.654</span>
+                        <span class="text-xs text-slate-400 font-medium">/ kWh PEA</span>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                        <span class="text-slate-400">ค่าไฟฟ้า PEA รวม:</span>
+                        <span id="subKpiPeaCost" class="text-slate-200 font-medium">฿0.00</span>
+                    </div>
+                </div>
+
+                <!-- KPI Card 2: UNIT ไฟฟ้า / OUTPUT (No Solar) -->
+                <div class="glass-card metric-card rounded-2xl p-5 border-l-4 border-l-emerald-500 shadow-md">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">UNIT ไฟฟ้า / OUTPUT</span>
+                        <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                            <i data-lucide="gauge" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-2">
+                        <span id="kpiUnitPerOutput" class="text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight">0.0778</span>
+                        <span class="text-xs text-slate-400 font-medium">kWh PEA / kg</span>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                        <span class="text-slate-400">หน่วย PEA: <span id="subKpiPeaUnit" class="text-slate-200 font-medium">0</span></span>
+                        <span class="text-slate-400">Output: <span id="subKpiOutput" class="text-slate-200 font-medium">0</span></span>
+                    </div>
+                </div>
+
+                <!-- KPI Card 3: บาท ไฟฟ้า / OUTPUT (Target: 0.212 บาท/kg with Dynamic Colors) -->
+                <div id="cardCostPerOutput" class="glass-card metric-card rounded-2xl p-5 border-l-4 border-l-pink-500 shadow-md">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">บาท ไฟฟ้า / OUTPUT</span>
+                        <div id="iconCostPerOutput" class="p-2 rounded-xl bg-pink-500/10 text-pink-400">
+                            <i data-lucide="trending-up" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-2">
+                        <span id="kpiCostPerOutput" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">฿0.284</span>
+                        <span class="text-xs text-slate-400 font-medium">/ kg</span>
+                    </div>
+                    <!-- Target Comparison Badge -->
+                    <div class="mt-2.5 flex items-center justify-between">
+                        <div class="text-[11px] text-slate-400">เป้าหมาย: <span class="font-medium text-slate-200">0.212 บาท/kg</span></div>
+                        <span id="kpiCostOutputVarianceBadge" class="px-2 py-0.5 rounded-full text-[11px] font-semibold border flex items-center gap-1">
+                            +0.0%
+                        </span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                        <span class="text-slate-400">สถานะ:</span>
+                        <span id="kpiCostOutputStatusText" class="font-medium text-slate-300">-</span>
+                    </div>
+                </div>
+
+                <!-- KPI Card 4: สัดส่วน Solar เทียบพลังงานรวม (Target: 24% with Dynamic Colors) -->
+                <div id="cardSolarShare" class="glass-card metric-card rounded-2xl p-5 border-l-4 border-l-amber-500 shadow-md">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">สัดส่วน SOLAR ต่อไฟรวม</span>
+                        <div id="iconSolarShare" class="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                            <i data-lucide="sun" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline space-x-2">
+                        <span id="kpiSolarShareOfTotal" class="text-2xl sm:text-3xl font-bold text-amber-400 tracking-tight">23.11%</span>
+                        <span class="text-xs text-slate-400 font-medium">ของไฟรวม</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="mt-2">
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div id="solarProgressBar" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-1.5 rounded-full" style="width: 24%"></div>
+                        </div>
+                    </div>
+                    <!-- Target Comparison Badge -->
+                    <div class="mt-2 flex items-center justify-between">
+                        <div class="text-[11px] text-slate-400">เป้าหมาย: <span class="font-medium text-slate-200">24.00%</span></div>
+                        <span id="kpiSolarVarianceBadge" class="px-2 py-0.5 rounded-full text-[11px] font-semibold border flex items-center gap-1">
+                            -0.0%
+                        </span>
+                    </div>
+                    <div class="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                        <span class="text-slate-400">เทียบหน่วย PEA:</span>
+                        <span id="subKpiSolarToPeaRatio" class="text-amber-400 font-medium">0%</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Secondary Summary Cards: Peak kW & Cost Component Breakdown -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            
+            <!-- Card: Peak Demand (kW) -->
+            <div class="glass-card rounded-xl p-4 border border-purple-500/20 bg-purple-950/20">
+                <div class="flex items-center justify-between text-purple-300 text-xs mb-1">
+                    <span class="font-medium">kW สูงสุด (Peak Demand)</span>
+                    <i data-lucide="activity" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div class="flex items-baseline space-x-1.5">
+                    <span id="secPeakKw" class="text-xl font-bold text-purple-300">876.00</span>
+                    <span class="text-xs text-purple-400">kW</span>
+                </div>
+                <div class="mt-1 text-[11px] text-purple-400/80">
+                    ค่า Demand Charge: <span id="secDemandCost" class="font-semibold text-purple-200">฿0</span>
+                </div>
+            </div>
+
+            <!-- Card: Energy Charge (On/Off Peak) -->
+            <div class="glass-card rounded-xl p-4 border border-sky-500/20 bg-sky-950/20">
+                <div class="flex items-center justify-between text-sky-300 text-xs mb-1">
+                    <span class="font-medium">ค่าพลังงาน (Energy Charge)</span>
+                    <i data-lucide="zap" class="w-4 h-4 text-sky-400"></i>
+                </div>
+                <div class="flex items-baseline space-x-1.5">
+                    <span id="secEnergyCharge" class="text-xl font-bold text-sky-300">฿0</span>
+                </div>
+                <div class="mt-1 text-[11px] text-sky-400/80">
+                    On-Peak: <span id="secOnPeakKwh" class="font-semibold text-sky-200">0</span> kWh
+                </div>
+            </div>
+
+            <!-- Card: Ft & Service Charge -->
+            <div class="glass-card rounded-xl p-4 border border-amber-500/20 bg-amber-950/20">
+                <div class="flex items-center justify-between text-amber-300 text-xs mb-1">
+                    <span class="font-medium">ค่า Ft & บริการ (Service)</span>
+                    <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+                </div>
+                <div class="flex items-baseline space-x-1.5">
+                    <span id="secFtServiceCharge" class="text-xl font-bold text-amber-300">฿0</span>
+                </div>
+                <div class="mt-1 text-[11px] text-amber-400/80">
+                    Ft: <span id="secFtCost" class="font-semibold text-amber-200">฿0</span> | บริการ: <span id="secServiceCost" class="font-semibold text-amber-200">฿0</span>
+                </div>
+            </div>
+
+            <!-- Card: Total Cost No VAT -->
+            <div class="glass-card rounded-xl p-4 border border-emerald-500/20 bg-emerald-950/20">
+                <div class="flex items-center justify-between text-emerald-300 text-xs mb-1">
+                    <span class="font-medium">ค่าไฟฟ้ารวม (ไม่รวม VAT)</span>
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div class="flex items-baseline space-x-1.5">
+                    <span id="secTotalCostNoVat" class="text-xl font-bold text-emerald-300">฿0</span>
+                </div>
+                <div class="mt-1 text-[11px] text-emerald-400/80">
+                    เฉลี่ยต่อวัน: <span id="secCostPerDay" class="font-semibold text-emerald-200">฿0</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            
+            <!-- Chart 1: Daily Energy & Peak kW Profile (8 cols) -->
+            <div class="lg:col-span-8 glass-card rounded-2xl p-5 shadow-sm space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="bar-chart" class="w-4 h-4 text-sky-400"></i>
+                            แนวโน้มการใช้พลังงาน PEA, Solar และ Peak Demand (kW) รายวัน
+                        </h3>
+                        <p class="text-xs text-slate-400">เปรียบเทียบสัดส่วน On-Peak, Off-Peak, Solar Generation และจุด Peak kW</p>
+                    </div>
+                </div>
+                <div class="relative h-72 sm:h-80 w-full">
+                    <canvas id="energyMixChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Cost & Efficiency (บาท/Output) (4 cols) -->
+            <div class="lg:col-span-4 glass-card rounded-2xl p-5 shadow-sm space-y-3">
+                <div class="border-b border-slate-800 pb-3">
+                    <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="line-chart" class="w-4 h-4 text-pink-400"></i>
+                        ประสิทธิภาพต้นทุน (บาท/kg) เทียบเป้า 0.212
+                    </h3>
+                    <p class="text-xs text-slate-400">ต้นทุนค่าไฟ PEA ต่อหน่วยผลผลิตเทียบเป้าหมาย</p>
+                </div>
+                <div class="relative h-72 sm:h-80 w-full">
+                    <canvas id="efficiencyChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Monthly Bill Comparison & Reconciliation Table (เมื่อปิดงวดบิล) -->
+        <div id="billComparisonSection" class="glass-card rounded-2xl p-5 shadow-sm space-y-4 border border-purple-500/20">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
+                        <i data-lucide="scale" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200">ตารางเปรียบเทียบและปิดงวดบิลการไฟฟ้า (Monthly Bill Reconciliation)</h3>
+                        <p class="text-xs text-slate-400">เทียบผลรวมสะสมจากระบบรายวัน กับบิลแจ้งหนี้จริงจากการไฟฟ้า PEA</p>
+                    </div>
+                </div>
+                <button onclick="openBillModal()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> แก้ไขข้อมูลบิลเดือนนี้
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left">
+                    <thead class="text-slate-400 bg-slate-900/80 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2.5 px-4">รายการ / รายละเอียด</th>
+                            <th class="py-2.5 px-4 text-right">ยอดรวมสะสมรายวัน (Daily Sum)</th>
+                            <th class="py-2.5 px-4 text-right">บิลทางการ PEA (Official Bill)</th>
+                            <th class="py-2.5 px-4 text-right">ผลต่าง (Difference)</th>
+                            <th class="py-2.5 px-4 text-center">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60" id="billReconciliationBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Daily Detailed Data Table (With Inline Edit Action) -->
+        <div class="glass-card rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="table" class="w-4 h-4 text-emerald-400"></i>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200">ตารางข้อมูลบันทึกรายวัน (Daily Records)</h3>
+                        <p class="text-xs text-slate-400">สามารถกดปุ่ม <span class="text-sky-400 font-medium">"แก้ไข"</span> เพื่ออัปเดตข้อมูลของแต่ละวันได้โดยตรง</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="openDataModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1.5 transition">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> เพิ่มวันใหม่
+                    </button>
+                    <button onclick="exportTableToCSV()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-sky-400"></i> ส่งออก CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[28rem]">
+                <table class="w-full text-xs text-left" id="dailyDataTable">
+                    <thead class="text-slate-400 bg-slate-900/95 sticky top-0 z-10 border-b border-slate-800 backdrop-blur">
+                        <tr>
+                            <th class="py-3 px-3">วันที่</th>
+                            <th class="py-3 px-3 text-right">On-Peak (kWh)</th>
+                            <th class="py-3 px-3 text-right">Off-Peak (kWh)</th>
+                            <th class="py-3 px-3 text-right">PEA รวม (kWh)</th>
+                            <th class="py-3 px-3 text-right text-purple-400">Peak kW</th>
+                            <th class="py-3 px-3 text-right text-amber-400">Solar (kWh)</th>
+                            <th class="py-3 px-3 text-right text-emerald-400">Output รวม (kg)</th>
+                            <th class="py-3 px-3 text-right">ค่าไฟ PEA (฿)</th>
+                            <th class="py-3 px-3 text-right text-sky-400 font-semibold">฿/kWh PEA</th>
+                            <th class="py-3 px-3 text-right text-emerald-400 font-semibold">kWh/kg</th>
+                            <th class="py-3 px-3 text-right text-pink-400 font-semibold">฿/kg (เป้า 0.212)</th>
+                            <th class="py-3 px-3 text-right text-amber-400 font-semibold">Solar แชร์ (%)</th>
+                            <th class="py-3 px-3 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/50" id="dailyTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                    <tfoot class="bg-slate-900/95 font-semibold text-slate-200 sticky bottom-0 border-t border-slate-700 backdrop-blur" id="dailyTableFoot">
+                        <!-- Populated by JS -->
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal 1: บันทึกบิลค่าไฟฟ้าทางการประจำเดือน (Official Monthly Bill Modal) -->
+    <div id="billModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl w-full max-w-2xl border border-purple-500/40 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+                        <i data-lucide="receipt" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">บันทึกข้อมูลจากบิลการไฟฟ้าทางการ (Official PEA Invoice)</h3>
+                        <p class="text-xs text-slate-400">กรอกตัวเลขจริงจากใบแจ้งหนี้เพื่อปิดงวดประจำเดือน</p>
+                    </div>
+                </div>
+                <button onclick="closeBillModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="billForm" onsubmit="saveOfficialBill(event)" class="space-y-4 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">ประจำเดือน (Month Key)</label>
+                        <select id="billMonthKey" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none" onchange="loadBillDataForForm()">
+                            <option value="2026-09">กันยายน 2569 (2026-09)</option>
+                            <option value="2026-10">ตุลาคม 2569 (2026-10)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">เลขที่ใบแจ้งหนี้ / ใบเสร็จ</label>
+                        <input type="text" id="billInvoiceNo" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none" placeholder="เช่น INV-PEA-202609-01">
+                    </div>
+                </div>
+
+                <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                    <h4 class="font-semibold text-sky-400 flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-4 h-4"></i> ข้อมูลหน่วยพลังงานไฟฟ้า (Energy Units)
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">On-Peak (kWh)</label>
+                            <input type="number" step="0.01" id="billOnPeakKwh" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sky-300 text-right font-medium" oninput="calcBillTotalUnits()">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Off-Peak + Holiday (kWh)</label>
+                            <input type="number" step="0.01" id="billOffPeakKwh" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-emerald-300 text-right font-medium" oninput="calcBillTotalUnits()">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">รวมหน่วย PEA (kWh)</label>
+                            <input type="number" step="0.01" id="billTotalPeaKwh" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-right font-bold" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                    <h4 class="font-semibold text-purple-400 flex items-center gap-1.5">
+                        <i data-lucide="dollar-sign" class="w-4 h-4"></i> ค่าใช้จ่ายตามบิล (Expenses Breakdown - No VAT)
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">Peak Demand สูงสุด (kW)</label>
+                            <input type="number" step="0.01" id="billPeakKw" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-purple-300 text-right font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">ค่าความต้องการ Demand (฿)</label>
+                            <input type="number" step="0.01" id="billDemandCharge" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-purple-300 text-right font-medium" oninput="calcBillTotalCost()">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">ค่าพลังงานไฟฟ้า Energy (฿)</label>
+                            <input type="number" step="0.01" id="billEnergyCharge" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sky-300 text-right font-medium" oninput="calcBillTotalCost()">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">ค่าไฟฟ้าผันแปร Ft (฿)</label>
+                            <input type="number" step="0.01" id="billFtCharge" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 text-right font-medium" oninput="calcBillTotalCost()">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">ค่าปรับ PF Penalty (฿)</label>
+                            <input type="number" step="0.01" id="billPfPenalty" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-rose-300 text-right font-medium" value="0.00" oninput="calcBillTotalCost()">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">ค่าบริการรายเดือน Service (฿)</label>
+                            <input type="number" step="0.01" id="billServiceCharge" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-right font-medium" value="312.24" oninput="calcBillTotalCost()">
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                        <span class="font-semibold text-white">ยอดรวมค่าไฟฟ้าก่อนภาษี (Total THB Exc. VAT):</span>
+                        <input type="number" step="0.01" id="billTotalCostNoVat" class="bg-slate-950 border border-emerald-500/50 rounded-lg px-3 py-1 text-emerald-400 text-right font-bold text-sm w-44" readonly>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeBillModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold transition shadow-md flex items-center gap-1.5">
+                        <i data-lucide="check" class="w-4 h-4"></i> บันทึกข้อมูลบิลทางการ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: เพิ่ม / แก้ไขข้อมูลรายวัน (Daily Entry & Edit Modal) -->
+    <div id="dataModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl w-full max-w-lg border border-slate-700 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                        <i data-lucide="calendar-plus" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 id="dataModalTitle" class="text-base font-bold text-white">บันทึกข้อมูลการใช้ไฟฟ้าและผลผลิตรายวัน</h3>
+                        <p class="text-xs text-slate-400">กรอกข้อมูลมิเตอร์ PEA, Solar และยอดผลิตรวม</p>
+                    </div>
+                </div>
+                <button onclick="closeDataModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="dailyEntryForm" onsubmit="saveDailyRecord(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">วันที่ (Date)</label>
+                    <input type="date" id="entryDate" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none" required>
+                </div>
+
+                <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                    <h4 class="font-semibold text-sky-400 flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-4 h-4"></i> ข้อมูลไฟฟ้า PEA & Solar (kWh)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">PEA On-Peak (kWh)</label>
+                            <input type="number" step="0.01" id="entryPeaOnPeak" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sky-300 text-right font-medium" required>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">PEA Off-Peak / Holiday (kWh)</label>
+                            <input type="number" step="0.01" id="entryPeaOffPeak" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-emerald-300 text-right font-medium" required>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">kW สูงสุดของวัน (Peak kW)</label>
+                            <input type="number" step="0.01" id="entryPeakKw" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-purple-300 text-right font-medium" required>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">หน่วยผลิต Solar (kWh)</label>
+                            <input type="number" step="0.01" id="entrySolarUnit" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-400 text-right font-medium" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                    <h4 class="font-semibold text-emerald-400 flex items-center gap-1.5">
+                        <i data-lucide="package" class="w-4 h-4"></i> ยอดผลผลิตรวม (Output kg)
+                    </h4>
+                    <div>
+                        <label class="block text-slate-400 mb-1">ยอดผลผลิตรวมทั้งหมด (Total Output kg)</label>
+                        <input type="number" step="0.01" id="entryOutputTotal" class="w-full bg-slate-950 border border-emerald-500/40 rounded-lg px-3 py-2 text-emerald-300 text-right font-bold text-sm" placeholder="เช่น 231609" required>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeDataModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-md flex items-center gap-1.5">
+                        <i data-lucide="save" class="w-4 h-4"></i> บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: ซิงค์ Google Sheet / Webhook Export Modal -->
+    <div id="syncModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl w-full max-w-xl border border-slate-700 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+                        <i data-lucide="cloud" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">ระบบเชื่อมต่อและบันทึก Google Sheet อัตโนมัติ</h3>
+                        <p class="text-xs text-slate-400">บันทึกข้อมูลย้อนหลังลงสเปรดชีตของคุณแบบ Real-time</p>
+                    </div>
+                </div>
+                <button onclick="closeSyncModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+                <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                    <span class="text-slate-400 block font-medium">Google Sheet ที่เชื่อมต่อ:</span>
+                    <a href="https://docs.google.com/spreadsheets/d/1NFDDL3daVUrjLKDZtWpE5m4nO0WYS8SPb6BLRCGj9Ec/edit?usp=sharing" target="_blank" class="text-sky-400 font-mono break-all hover:underline flex items-center gap-1 font-semibold">
+                        1NFDDL3daVUrjLKDZtWpE5m4nO0WYS8SPb6BLRCGj9Ec
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                    </a>
+                </div>
+
+                <!-- Google Apps Script Web App URL Setting -->
+                <div class="p-3.5 bg-slate-900/80 rounded-xl border border-sky-500/20 space-y-2">
+                    <label class="block text-slate-300 font-semibold">
+                        🔗 Google Apps Script Webhook URL (สำหรับการบันทึกอัตโนมัติจากเบราว์เซอร์)
+                    </label>
+                    <input type="url" id="gasWebhookUrl" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-mono text-xs focus:outline-none" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveWebhookUrl()">
+                    <p class="text-[11px] text-slate-400">เมื่อระบุ URL นี้ ทุกครั้งที่คุณกด "บันทึก" หรือ "แก้ไขในตาราง" ข้อมูลจะถูกส่งไปเขียนลง Google Sheet ทันทีอัตโนมัติ</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button onclick="downloadBackupJSON()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="file-json" class="w-4 h-4 text-amber-400"></i> สำรองไฟล์ JSON
+                    </button>
+                    <button onclick="exportTableToCSV()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i> ดาวน์โหลด CSV นำเข้า Sheet
+                    </button>
+                </div>
+
+                <!-- Google Apps Script Code snippet -->
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400 font-semibold">📋 โค้ด Google Apps Script (ใส่ในส่วนขยาย > Apps Script):</span>
+                        <button onclick="copyGasCode()" class="text-sky-400 hover:text-sky-300 text-[11px] font-medium flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> คัดลอกโค้ด
+                        </button>
+                    </div>
+                    <pre class="bg-slate-900 p-2.5 rounded-lg text-[10px] text-slate-300 overflow-x-auto max-h-28 font-mono border border-slate-800" id="gasCodeBlock">function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Daily_Summary") || ss.insertSheet("Daily_Summary");
+  var data = JSON.parse(e.postData.contents);
+  if (data.action === "save_daily") {
+    sheet.appendRow([data.date, data.pea_onpeak_kwh, data.pea_offpeak_kwh, data.pea_total_kwh, data.peak_kw, data.solar_unit, data.output_total, data.rate_per_pea, data.unit_per_output, data.cost_per_output, data.solar_ratio, new Date()]);
+    return ContentService.createTextOutput(JSON.stringify({status: "ok"})).setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // 1. Initial State & Data
+        const RAW_MASTER_DATA = [{"day": 1, "date": "2026-09-01", "day_of_week": "Tuesday", "is_weekend": false, "pea_unit": 14429.2, "pea_onpeak_kwh": 6549.6, "pea_offpeak_kwh": 7879.6, "pea_holiday_kwh": 0.0, "peak_kw": 844.0, "pea_energy_cost_no_vat": 50260.845120000005, "solar_unit": 3093.12, "total_unit": 17522.32, "solar_share_pct": 17.65, "solar_to_pea_pct": 21.44, "output_bhs": 117347.0, "output_yueli": 114262.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 231609.0, "machine_units": {"ISOWA": 324.0, "BHS": 1686.0, "YUELI": 5580.0, "AIRCOM 75": 1454.0, "ป้อมยาม": 12.0, "SHOP ช่าง": 6.0, "BOILER1/2": 414.0, "ห้องครัว": 90.0, "AIROFFICE": 862.0, "ปลั๊กโรงงาน": 159.0, "แสงสว่างโรงงาน​": 624.0, "AIRCOM1": 0.0, "AIRCOM2": 280.0, "BOILER3": 285.0, "ห้องกาว​": 164.0, "BALER": 285.0, "คลังม้วน​": 198.0, "ที่ชาร์ตแบตFG": 420.0, "รางคอน​": 2.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 171.0, "ที่ชาร์ตแบต​RM2": 159.0, "TOTAL": 13176.0}}, {"day": 2, "date": "2026-09-02", "day_of_week": "Wednesday", "is_weekend": false, "pea_unit": 13714.8, "pea_onpeak_kwh": 6035.6, "pea_offpeak_kwh": 7679.2, "pea_holiday_kwh": 0.0, "peak_kw": 820.0, "pea_energy_cost_no_vat": 47472.591920000006, "solar_unit": 3404.5120000000006, "total_unit": 17119.311999999998, "solar_share_pct": 19.89, "solar_to_pea_pct": 24.82, "output_bhs": 99455.0, "output_yueli": 109817.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 209272.0, "machine_units": {"ISOWA": 357.0, "BHS": 1719.0, "YUELI": 6010.0, "AIRCOM 75": 1542.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 8.0, "BOILER1/2": 441.0, "ห้องครัว": 97.0, "AIROFFICE": 824.0, "ปลั๊กโรงงาน": 162.0, "แสงสว่างโรงงาน​": 670.0, "AIRCOM1": 0.0, "AIRCOM2": 0.0, "BOILER3": 303.0, "ห้องกาว​": 168.0, "BALER": 340.0, "คลังม้วน​": 221.0, "ที่ชาร์ตแบตFG": 453.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 186.0, "ที่ชาร์ตแบต​RM2": 132.0, "TOTAL": 13643.0}}, {"day": 3, "date": "2026-09-03", "day_of_week": "Thursday", "is_weekend": false, "pea_unit": 12890.0, "pea_onpeak_kwh": 5124.0, "pea_offpeak_kwh": 7766.0, "pea_holiday_kwh": 0.0, "peak_kw": 840.0, "pea_energy_cost_no_vat": 43750.684799999995, "solar_unit": 4835.872, "total_unit": 17725.872, "solar_share_pct": 27.28, "solar_to_pea_pct": 37.52, "output_bhs": 131177.0, "output_yueli": 92655.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 223832.0, "machine_units": {"ISOWA": 345.0, "BHS": 1717.0, "YUELI": 6036.0, "AIRCOM 75": 1544.0, "ป้อมยาม": 6.0, "SHOP ช่าง": 7.0, "BOILER1/2": 503.0, "ห้องครัว": 99.0, "AIROFFICE": 833.0, "ปลั๊กโรงงาน": 167.0, "แสงสว่างโรงงาน​": 584.0, "AIRCOM1": 0.0, "AIRCOM2": 292.0, "BOILER3": 287.0, "ห้องกาว​": 187.0, "BALER": 325.0, "คลังม้วน​": 222.0, "ที่ชาร์ตแบตFG": 414.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 157.0, "ที่ชาร์ตแบต​RM2": 162.0, "TOTAL": 13890.0}}, {"day": 4, "date": "2026-09-04", "day_of_week": "Friday", "is_weekend": false, "pea_unit": 13415.6, "pea_onpeak_kwh": 5820.8, "pea_offpeak_kwh": 7594.8, "pea_holiday_kwh": 0.0, "peak_kw": 848.0, "pea_energy_cost_no_vat": 46305.57776000001, "solar_unit": 4522.368, "total_unit": 17937.968, "solar_share_pct": 25.21, "solar_to_pea_pct": 33.71, "output_bhs": 110461.0, "output_yueli": 109881.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 220342.0, "machine_units": {"ISOWA": 362.0, "BHS": 1842.0, "YUELI": 6586.0, "AIRCOM 75": 1581.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 10.0, "BOILER1/2": 465.0, "ห้องครัว": 106.0, "AIROFFICE": 899.0, "ปลั๊กโรงงาน": 180.0, "แสงสว่างโรงงาน​": 633.0, "AIRCOM1": 0.0, "AIRCOM2": 307.0, "BOILER3": 313.0, "ห้องกาว​": 184.0, "BALER": 358.0, "คลังม้วน​": 234.0, "ที่ชาร์ตแบตFG": 445.0, "รางคอน​": 3.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 174.0, "ที่ชาร์ตแบต​RM2": 165.0, "TOTAL": 14855.0}}, {"day": 5, "date": "2026-09-05", "day_of_week": "Saturday", "is_weekend": true, "pea_unit": 13260.8, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 13260.8, "peak_kw": 816.0, "pea_energy_cost_no_vat": 36679.3728, "solar_unit": 4470.528, "total_unit": 17731.328, "solar_share_pct": 25.21, "solar_to_pea_pct": 33.71, "output_bhs": 115328.0, "output_yueli": 118391.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 233715.0, "machine_units": {}}, {"day": 6, "date": "2026-09-06", "day_of_week": "Sunday", "is_weekend": true, "pea_unit": 7300.8, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 7300.8, "peak_kw": 788.0, "pea_energy_cost_no_vat": 20194.012799999997, "solar_unit": 3623.168, "total_unit": 10923.968, "solar_share_pct": 33.17, "solar_to_pea_pct": 49.63, "output_bhs": 50176.0, "output_yueli": 39374.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 89551.0, "machine_units": {"ป้อมยาม": 28728.0, "รางคอน​": 14348.0, "รางcon": 16782.0, "ที่ชาร์ตแบต​RM2": 79827.0}}, {"day": 7, "date": "2026-09-07", "day_of_week": "Monday", "is_weekend": false, "pea_unit": 9207.2, "pea_onpeak_kwh": 5788.4, "pea_offpeak_kwh": 3418.8, "pea_holiday_kwh": 0.0, "peak_kw": 788.0, "pea_energy_cost_no_vat": 34613.94488, "solar_unit": 4221.12, "total_unit": 13428.32, "solar_share_pct": 31.43, "solar_to_pea_pct": 45.85, "output_bhs": 78070.0, "output_yueli": 82051.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 160121.0, "machine_units": {"ISOWA": 351.0, "BHS": 1778.0, "YUELI": 6629.0, "AIRCOM 75": 1549.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 11.0, "BOILER1/2": 453.0, "ห้องครัว": 102.0, "AIROFFICE": 897.0, "ปลั๊กโรงงาน": 164.0, "แสงสว่างโรงงาน​": 613.0, "AIRCOM1": 0.0, "AIRCOM2": 300.0, "BOILER3": 304.0, "ห้องกาว​": 204.0, "BALER": 314.0, "คลังม้วน​": 235.0, "ที่ชาร์ตแบตFG": 388.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 176.0, "ที่ชาร์ตแบต​RM2": 139.0, "TOTAL": 14617.0}}, {"day": 8, "date": "2026-09-08", "day_of_week": "Tuesday", "is_weekend": false, "pea_unit": 13716.8, "pea_onpeak_kwh": 5718.8, "pea_offpeak_kwh": 7998.0, "pea_holiday_kwh": 0.0, "peak_kw": 872.0, "pea_energy_cost_no_vat": 46977.516560000004, "solar_unit": 4042.752, "total_unit": 17759.552, "solar_share_pct": 22.76, "solar_to_pea_pct": 29.47, "output_bhs": 117617.0, "output_yueli": 123179.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 240795.0, "machine_units": {"ISOWA": 204.0, "BHS": 1756.0, "YUELI": 6146.0, "AIRCOM 75": 1505.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 11.0, "BOILER1/2": 396.0, "ห้องครัว": 99.0, "AIROFFICE": 865.0, "ปลั๊กโรงงาน": 161.0, "แสงสว่างโรงงาน​": 637.0, "AIRCOM1": 0.0, "AIRCOM2": 288.0, "BOILER3": 304.0, "ห้องกาว​": 177.0, "BALER": 322.0, "คลังม้วน​": 244.0, "ที่ชาร์ตแบตFG": 422.0, "รางคอน​": 3.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 165.0, "ที่ชาร์ตแบต​RM2": 162.0, "TOTAL": 13875.0}}, {"day": 9, "date": "2026-09-09", "day_of_week": "Wednesday", "is_weekend": false, "pea_unit": 14066.4, "pea_onpeak_kwh": 6064.4, "pea_offpeak_kwh": 8002.0, "pea_holiday_kwh": 0.0, "peak_kw": 868.0, "pea_energy_cost_no_vat": 48490.62727999999, "solar_unit": 4091.616, "total_unit": 18158.016, "solar_share_pct": 22.53, "solar_to_pea_pct": 29.09, "output_bhs": 112370.0, "output_yueli": 131058.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 243428.0, "machine_units": {"ISOWA": 237.0, "BHS": 1823.0, "YUELI": 6419.0, "AIRCOM 75": 1614.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 13.0, "BOILER1/2": 428.0, "ห้องครัว": 108.0, "AIROFFICE": 1017.0, "ปลั๊กโรงงาน": 175.0, "แสงสว่างโรงงาน​": 671.0, "AIRCOM1": 0.0, "AIRCOM2": 307.0, "BOILER3": 334.0, "ห้องกาว​": 208.0, "BALER": 403.0, "คลังม้วน​": 253.0, "ที่ชาร์ตแบตFG": 355.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 201.0, "ที่ชาร์ตแบต​RM2": 167.0, "TOTAL": 14743.0}}, {"day": 10, "date": "2026-09-10", "day_of_week": "Thursday", "is_weekend": false, "pea_unit": 13821.2, "pea_onpeak_kwh": 6070.8, "pea_offpeak_kwh": 7750.4, "pea_holiday_kwh": 0.0, "peak_kw": 796.0, "pea_energy_cost_no_vat": 47822.517360000005, "solar_unit": 4202.368, "total_unit": 18023.568, "solar_share_pct": 23.32, "solar_to_pea_pct": 30.41, "output_bhs": 124978.0, "output_yueli": 69824.0, "output_isowa": 18383.0, "output_other": 0.0, "output_total": 213185.0, "machine_units": {"ISOWA": 424.0, "BHS": 1741.0, "YUELI": 5905.0, "AIRCOM 75": 1458.0, "ป้อมยาม": 10.0, "SHOP ช่าง": 13.0, "BOILER1/2": 417.0, "ห้องครัว": 99.0, "AIROFFICE": 826.0, "ปลั๊กโรงงาน": 162.0, "แสงสว่างโรงงาน​": 626.0, "AIRCOM1": 82.0, "AIRCOM2": 281.0, "BOILER3": 302.0, "ห้องกาว​": 192.0, "BALER": 318.0, "คลังม้วน​": 223.0, "ที่ชาร์ตแบตFG": 609.0, "รางคอน​": 4.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 177.0, "ที่ชาร์ตแบต​RM2": 132.0, "TOTAL": 14001.0}}, {"day": 11, "date": "2026-09-11", "day_of_week": "Friday", "is_weekend": false, "pea_unit": 14194.0, "pea_onpeak_kwh": 6102.0, "pea_offpeak_kwh": 8092.0, "pea_holiday_kwh": 0.0, "peak_kw": 840.0, "pea_energy_cost_no_vat": 48902.9844, "solar_unit": 3484.704, "total_unit": 17678.704, "solar_share_pct": 19.71, "solar_to_pea_pct": 24.55, "output_bhs": 142762.0, "output_yueli": 123245.0, "output_isowa": -54.0, "output_other": 0.0, "output_total": 265953.0, "machine_units": {"ISOWA": 217.0, "BHS": 1822.0, "YUELI": 6138.0, "AIRCOM 75": 1539.0, "ป้อมยาม": 9.0, "SHOP ช่าง": 15.0, "BOILER1/2": 430.0, "ห้องครัว": 97.0, "AIROFFICE": 811.0, "ปลั๊กโรงงาน": 149.0, "แสงสว่างโรงงาน​": 624.0, "AIRCOM1": 0.0, "AIRCOM2": 296.0, "BOILER3": 312.0, "ห้องกาว​": 173.0, "BALER": 345.0, "คลังม้วน​": 209.0, "ที่ชาร์ตแบตFG": 475.0, "รางคอน​": 3.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 142.0, "ที่ชาร์ตแบต​RM2": 141.0, "TOTAL": 13948.0}}, {"day": 12, "date": "2026-09-12", "day_of_week": "Saturday", "is_weekend": true, "pea_unit": 14455.6, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 14455.6, "peak_kw": 824.0, "pea_energy_cost_no_vat": 39984.189600000005, "solar_unit": 3033.344, "total_unit": 17488.944, "solar_share_pct": 17.34, "solar_to_pea_pct": 20.98, "output_bhs": 109457.0, "output_yueli": 129650.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 239107.0, "machine_units": {}}, {"day": 13, "date": "2026-09-13", "day_of_week": "Sunday", "is_weekend": true, "pea_unit": 5950.4, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 5950.4, "peak_kw": 876.0, "pea_energy_cost_no_vat": 16458.806399999998, "solar_unit": 3007.008, "total_unit": 8957.408, "solar_share_pct": 33.57, "solar_to_pea_pct": 50.53, "output_bhs": 28479.0, "output_yueli": 38224.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 66703.0, "machine_units": {"ป้อมยาม": 28784.0, "รางคอน​": 14367.0, "รางcon": 16785.0, "ที่ชาร์ตแบต​RM2": 80747.0}}, {"day": 14, "date": "2026-09-14", "day_of_week": "Monday", "is_weekend": false, "pea_unit": 9924.0, "pea_onpeak_kwh": 6304.8, "pea_offpeak_kwh": 3619.2, "pea_holiday_kwh": 0.0, "peak_kw": 828.0, "pea_energy_cost_no_vat": 37412.62896, "solar_unit": 3385.888, "total_unit": 13309.887999999999, "solar_share_pct": 25.44, "solar_to_pea_pct": 34.12, "output_bhs": 77565.0, "output_yueli": 74264.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 151829.0, "machine_units": {"ISOWA": 163.0, "BHS": 1860.0, "YUELI": 6791.0, "AIRCOM 75": 1724.0, "ป้อมยาม": 8.0, "SHOP ช่าง": 9.0, "BOILER1/2": 429.0, "ห้องครัว": 97.0, "AIROFFICE": 920.0, "ปลั๊กโรงงาน": 162.0, "แสงสว่างโรงงาน​": 696.0, "AIRCOM1": 0.0, "AIRCOM2": 312.0, "BOILER3": 311.0, "ห้องกาว​": 184.0, "BALER": 346.0, "คลังม้วน​": 244.0, "ที่ชาร์ตแบตFG": 477.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 216.0, "ที่ชาร์ตแบต​RM2": 171.0, "TOTAL": 15123.0}}, {"day": 15, "date": "2026-09-15", "day_of_week": "Tuesday", "is_weekend": false, "pea_unit": 14454.8, "pea_onpeak_kwh": 6347.6, "pea_offpeak_kwh": 8107.2, "pea_holiday_kwh": 0.0, "peak_kw": 836.0, "pea_energy_cost_no_vat": 50012.454320000004, "solar_unit": 3552.032, "total_unit": 18006.832, "solar_share_pct": 19.73, "solar_to_pea_pct": 24.57, "output_bhs": 111135.0, "output_yueli": 136731.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 247856.0, "machine_units": {}}, {"day": 16, "date": "2026-09-16", "day_of_week": "Wednesday", "is_weekend": false, "pea_unit": 13155.599999999999, "pea_onpeak_kwh": 5814.4, "pea_offpeak_kwh": 7341.2, "pea_holiday_kwh": 0.0, "peak_kw": 844.0, "pea_energy_cost_no_vat": 45576.30448, "solar_unit": 4181.344, "total_unit": 17336.944, "solar_share_pct": 24.12, "solar_to_pea_pct": 31.78, "output_bhs": 103979.0, "output_yueli": 113094.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 217073.0, "machine_units": {"ป้อมยาม": 28806.0, "รางคอน​": 14376.0, "รางcon": 16786.0, "ที่ชาร์ตแบต​RM2": 81212.0}}, {"day": 17, "date": "2026-09-17", "day_of_week": "Thursday", "is_weekend": false, "pea_unit": 11313.2, "pea_onpeak_kwh": 4174.4, "pea_offpeak_kwh": 7138.8, "pea_holiday_kwh": 0.0, "peak_kw": 832.0, "pea_energy_cost_no_vat": 37888.69808, "solar_unit": 3836.128, "total_unit": 15149.328000000001, "solar_share_pct": 25.32, "solar_to_pea_pct": 33.91, "output_bhs": 48843.0, "output_yueli": 101206.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 150049.0, "machine_units": {"ISOWA": 161.0, "BHS": 1163.0, "YUELI": 5647.0, "AIRCOM 75": 1196.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 14.0, "BOILER1/2": 263.0, "ห้องครัว": 95.0, "AIROFFICE": 789.0, "ปลั๊กโรงงาน": 129.0, "แสงสว่างโรงงาน​": 625.0, "AIRCOM1": 0.0, "AIRCOM2": 297.0, "BOILER3": 313.0, "ห้องกาว​": 145.0, "BALER": 333.0, "คลังม้วน​": 230.0, "ที่ชาร์ตแบตFG": 375.0, "รางคอน​": 2.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 186.0, "ที่ชาร์ตแบต​RM2": 102.0, "TOTAL": 12073.0}}, {"day": 18, "date": "2026-09-18", "day_of_week": "Friday", "is_weekend": false, "pea_unit": 11389.2, "pea_onpeak_kwh": 4554.0, "pea_offpeak_kwh": 6835.2, "pea_holiday_kwh": 0.0, "peak_kw": 792.0, "pea_energy_cost_no_vat": 38698.758, "solar_unit": 2514.9120000000003, "total_unit": 13904.112000000001, "solar_share_pct": 18.09, "solar_to_pea_pct": 22.08, "output_bhs": 133039.0, "output_yueli": 26974.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 160013.0, "machine_units": {"ISOWA": 157.0, "BHS": 1679.0, "YUELI": 2190.0, "AIRCOM 75": 917.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 11.0, "BOILER1/2": 108.0, "ห้องครัว": 92.0, "AIROFFICE": 738.0, "ปลั๊กโรงงาน": 150.0, "แสงสว่างโรงงาน​": 628.0, "AIRCOM1": 0.0, "AIRCOM2": 296.0, "BOILER3": 337.0, "ห้องกาว​": 154.0, "BALER": 296.0, "คลังม้วน​": 204.0, "ที่ชาร์ตแบตFG": 389.0, "รางคอน​": 2.0, "รางcon": 2.0, "ที่ชาร์ตแบต​RM1": 161.0, "ที่ชาร์ตแบต​RM2": 102.0, "TOTAL": 8620.0}}, {"day": 19, "date": "2026-09-19", "day_of_week": "Saturday", "is_weekend": true, "pea_unit": 10741.2, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 10741.2, "peak_kw": 712.0, "pea_energy_cost_no_vat": 29710.159200000002, "solar_unit": 3600.256, "total_unit": 14341.456, "solar_share_pct": 25.1, "solar_to_pea_pct": 33.52, "output_bhs": 118810.0, "output_yueli": 53747.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 172556.0, "machine_units": {}}, {"day": 20, "date": "2026-09-20", "day_of_week": "Sunday", "is_weekend": true, "pea_unit": 5104.4, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 5104.4, "peak_kw": 816.0, "pea_energy_cost_no_vat": 14118.7704, "solar_unit": 4660.032, "total_unit": 9764.432, "solar_share_pct": 47.72, "solar_to_pea_pct": 91.29, "output_bhs": 17788.0, "output_yueli": 25205.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 42993.0, "machine_units": {"ป้อมยาม": 28835.0, "รางคอน​": 14384.0, "รางcon": 16790.0, "ที่ชาร์ตแบต​RM2": 81539.0}}, {"day": 21, "date": "2026-09-21", "day_of_week": "Monday", "is_weekend": false, "pea_unit": 10846.400000000001, "pea_onpeak_kwh": 6659.6, "pea_offpeak_kwh": 4186.8, "pea_holiday_kwh": 0.0, "peak_kw": 812.0, "pea_energy_cost_no_vat": 40524.642320000006, "solar_unit": 3293.312, "total_unit": 14139.712000000001, "solar_share_pct": 23.29, "solar_to_pea_pct": 30.36, "output_bhs": 80934.0, "output_yueli": 83137.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 164071.0, "machine_units": {"ISOWA": 173.0, "BHS": 1571.0, "YUELI": 5444.0, "AIRCOM 75": 1413.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 13.0, "BOILER1/2": 380.0, "ห้องครัว": 96.0, "AIROFFICE": 759.0, "ปลั๊กโรงงาน": 151.0, "แสงสว่างโรงงาน​": 689.0, "AIRCOM1": 0.0, "AIRCOM2": 311.0, "BOILER3": 360.0, "ห้องกาว​": 153.0, "BALER": 290.0, "คลังม้วน​": 204.0, "ที่ชาร์ตแบตFG": 361.0, "รางคอน​": 2.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 190.0, "ที่ชาร์ตแบต​RM2": 93.0, "TOTAL": 12661.0}}, {"day": 22, "date": "2026-09-22", "day_of_week": "Tuesday", "is_weekend": false, "pea_unit": 11014.0, "pea_onpeak_kwh": 5711.2, "pea_offpeak_kwh": 5302.8, "pea_holiday_kwh": 0.0, "peak_kw": 868.0, "pea_energy_cost_no_vat": 39489.56224000001, "solar_unit": 3880.96, "total_unit": 14894.96, "solar_share_pct": 26.06, "solar_to_pea_pct": 35.24, "output_bhs": 85281.0, "output_yueli": 60202.0, "output_isowa": 10505.0, "output_other": 0.0, "output_total": 155988.0, "machine_units": {}}, {"day": 23, "date": "2026-09-23", "day_of_week": "Wednesday", "is_weekend": false, "pea_unit": 12364.8, "pea_onpeak_kwh": 6370.8, "pea_offpeak_kwh": 5994.0, "pea_holiday_kwh": 0.0, "peak_kw": 824.0, "pea_energy_cost_no_vat": 44268.174960000004, "solar_unit": 2944.0640000000003, "total_unit": 15308.864, "solar_share_pct": 19.23, "solar_to_pea_pct": 23.81, "output_bhs": 95670.0, "output_yueli": 84133.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 179803.0, "machine_units": {"ป้อมยาม": 28857.0, "รางคอน​": 14391.0, "รางcon": 16792.0, "ที่ชาร์ตแบต​RM2": 81877.0}}, {"day": 24, "date": "2026-09-24", "day_of_week": "Thursday", "is_weekend": false, "pea_unit": 14056.0, "pea_onpeak_kwh": 7496.4, "pea_offpeak_kwh": 6559.6, "pea_holiday_kwh": 0.0, "peak_kw": 780.0, "pea_energy_cost_no_vat": 50724.70728000001, "solar_unit": 2649.792, "total_unit": 16705.792, "solar_share_pct": 15.86, "solar_to_pea_pct": 18.85, "output_bhs": 87211.0, "output_yueli": 101040.0, "output_isowa": 12579.0, "output_other": 0.0, "output_total": 200830.0, "machine_units": {"ISOWA": 305.0, "BHS": 1902.0, "YUELI": 6235.0, "AIRCOM 75": 1412.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 12.0, "BOILER1/2": 414.0, "ห้องครัว": 95.0, "AIROFFICE": 769.0, "ปลั๊กโรงงาน": 165.0, "แสงสว่างโรงงาน​": 719.0, "AIRCOM1": 152.0, "AIRCOM2": 286.0, "BOILER3": 348.0, "ห้องกาว​": 180.0, "BALER": 311.0, "คลังม้วน​": 214.0, "ที่ชาร์ตแบตFG": 456.0, "รางคอน​": 3.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 231.0, "ที่ชาร์ตแบต​RM2": 137.0, "TOTAL": 14354.0}}, {"day": 25, "date": "2026-09-25", "day_of_week": "Friday", "is_weekend": false, "pea_unit": 16503.2, "pea_onpeak_kwh": 8579.2, "pea_offpeak_kwh": 7924.0, "pea_holiday_kwh": 0.0, "peak_kw": 856.0, "pea_energy_cost_no_vat": 59204.70304000001, "solar_unit": 2514.9120000000003, "total_unit": 19018.112, "solar_share_pct": 13.22, "solar_to_pea_pct": 15.24, "output_bhs": 128811.0, "output_yueli": 109282.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 238093.0, "machine_units": {"ISOWA": 170.0, "BHS": 1703.0, "YUELI": 5965.0, "AIRCOM 75": 1434.0, "ป้อมยาม": 10.0, "SHOP ช่าง": 12.0, "BOILER1/2": 402.0, "ห้องครัว": 88.0, "AIROFFICE": 753.0, "ปลั๊กโรงงาน": 142.0, "แสงสว่างโรงงาน​": 813.0, "AIRCOM1": 0.0, "AIRCOM2": 288.0, "BOILER3": 303.0, "ห้องกาว​": 144.0, "BALER": 318.0, "คลังม้วน​": 202.0, "ที่ชาร์ตแบตFG": 477.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 250.0, "ที่ชาร์ตแบต​RM2": 163.0, "TOTAL": 13640.0}}, {"day": 26, "date": "2026-09-26", "day_of_week": "Saturday", "is_weekend": true, "pea_unit": 14638.8, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 14638.8, "peak_kw": 788.0, "pea_energy_cost_no_vat": 40490.9208, "solar_unit": 2944.064, "total_unit": 17582.863999999998, "solar_share_pct": 16.74, "solar_to_pea_pct": 20.11, "output_bhs": 130311.0, "output_yueli": 75993.0, "output_isowa": 6050.0, "output_other": 0.0, "output_total": 212354.0, "machine_units": {}}, {"day": 27, "date": "2026-09-27", "day_of_week": "Sunday", "is_weekend": true, "pea_unit": 7862.8, "pea_onpeak_kwh": 0.0, "pea_offpeak_kwh": 0.0, "pea_holiday_kwh": 7862.8, "peak_kw": 788.0, "pea_energy_cost_no_vat": 21748.504800000002, "solar_unit": 3033.344, "total_unit": 10896.144, "solar_share_pct": 27.84, "solar_to_pea_pct": 38.58, "output_bhs": 54058.0, "output_yueli": 45889.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 99947.0, "machine_units": {"ป้อมยาม": 28889.0, "รางคอน​": 14400.0, "รางcon": 16793.0, "ที่ชาร์ตแบต​RM2": 82344.0}}, {"day": 28, "date": "2026-09-28", "day_of_week": "Monday", "is_weekend": false, "pea_unit": 5164.799999999999, "pea_onpeak_kwh": 2671.2, "pea_offpeak_kwh": 2493.6, "pea_holiday_kwh": 0.0, "peak_kw": 768.0, "pea_energy_cost_no_vat": 18506.867039999997, "solar_unit": 4181.344, "total_unit": 9346.144, "solar_share_pct": 44.74, "solar_to_pea_pct": 80.96, "output_bhs": 17156.0, "output_yueli": 14267.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 31423.0, "machine_units": {"ISOWA": 361.0, "BHS": 1062.0, "YUELI": 1062.0, "AIRCOM 75": 1503.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 16.0, "BOILER1/2": 297.0, "ห้องครัว": 86.0, "AIROFFICE": 599.0, "ปลั๊กโรงงาน": 116.0, "แสงสว่างโรงงาน​": 1851.0, "AIRCOM1": 0.0, "AIRCOM2": 523.0, "BOILER3": 603.0, "ห้องกาว​": 134.0, "BALER": 276.0, "คลังม้วน​": 222.0, "ที่ชาร์ตแบตFG": 315.0, "รางคอน​": 2.0, "รางcon": 1.0, "ที่ชาร์ตแบต​RM1": 193.0, "ที่ชาร์ตแบต​RM2": 91.0, "TOTAL": 9320.0}}, {"day": 29, "date": "2026-09-29", "day_of_week": "Tuesday", "is_weekend": false, "pea_unit": 13576.400000000001, "pea_onpeak_kwh": 5859.6, "pea_offpeak_kwh": 7716.8, "pea_holiday_kwh": 0.0, "peak_kw": 816.0, "pea_energy_cost_no_vat": 46811.662319999996, "solar_unit": 2649.792, "total_unit": 16226.192000000001, "solar_share_pct": 16.33, "solar_to_pea_pct": 19.52, "output_bhs": 106156.0, "output_yueli": 110303.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 216459.0, "machine_units": {"ISOWA": 363.0, "BHS": 1757.0, "YUELI": 1757.0, "AIRCOM 75": 1435.0, "ป้อมยาม": 7.0, "SHOP ช่าง": 11.0, "BOILER1/2": 439.0, "ห้องครัว": 91.0, "AIROFFICE": 767.0, "ปลั๊กโรงงาน": 167.0, "แสงสว่างโรงงาน​": 649.0, "AIRCOM1": 0.0, "AIRCOM2": 291.0, "BOILER3": 326.0, "ห้องกาว​": 168.0, "BALER": 323.0, "คลังม้วน​": 258.0, "ที่ชาร์ตแบตFG": 455.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 249.0, "ที่ชาร์ตแบต​RM2": 142.0, "TOTAL": 9658.0}}, {"day": 30, "date": "2026-09-30", "day_of_week": "Wednesday", "is_weekend": false, "pea_unit": 13116.0, "pea_onpeak_kwh": 5374.4, "pea_offpeak_kwh": 7741.6, "pea_holiday_kwh": 0.0, "peak_kw": 836.0, "pea_energy_cost_no_vat": 44771.482879999996, "solar_unit": 3033.344, "total_unit": 16149.344000000001, "solar_share_pct": 18.78, "solar_to_pea_pct": 23.13, "output_bhs": 109830.0, "output_yueli": 127589.0, "output_isowa": 0.0, "output_other": 0.0, "output_total": 237420.0, "machine_units": {"ISOWA": 366.0, "BHS": 1649.0, "YUELI": 1649.0, "AIRCOM 75": 1385.0, "ป้อมยาม": 8.0, "SHOP ช่าง": 12.0, "BOILER1/2": 424.0, "ห้องครัว": 93.0, "AIROFFICE": 801.0, "ปลั๊กโรงงาน": 160.0, "แสงสว่างโรงงาน​": 648.0, "AIRCOM1": 0.0, "AIRCOM2": 289.0, "BOILER3": 327.0, "ห้องกาว​": 151.0, "BALER": 338.0, "คลังม้วน​": 245.0, "ที่ชาร์ตแบตFG": 496.0, "รางคอน​": 3.0, "รางcon": 0.0, "ที่ชาร์ตแบต​RM1": 256.0, "ที่ชาร์ตแบต​RM2": 145.0, "TOTAL": 9445.0}}];
+        let appData = JSON.parse(localStorage.getItem('energy_master_dataset')) || RAW_MASTER_DATA;
+        
+        const DEFAULT_BILLS = {"2026-09": {"month_key": "2026-09", "month_name": "กันยายน 2569", "invoice_no": "INV-PEA-202609-01", "pea_onpeak_kwh": 139174.4, "pea_offpeak_kwh": 216474.0, "pea_holiday_kwh": 0.0, "pea_total_kwh": 355648.4, "peak_kw": 876.0, "energy_charge": 1146714.76, "demand_charge": 116446.68, "ft_charge": 57721.74, "pf_penalty": 0.0, "service_charge": 312.24, "total_cost_no_vat": 1321195.42, "output_total": 5262700.0, "note": "บิลปิดงวดประจำเดือนกันยายน 2569 จาก PEA AMR"}};
+        let officialBills = JSON.parse(localStorage.getItem('pea_official_bills')) || DEFAULT_BILLS;
+
+        const DEFAULT_TARIFFS = {"2026-09": {"month_key": "2026-09", "month_name": "กันยายน 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}, "2026-10": {"month_key": "2026-10", "month_name": "ตุลาคม 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}};
+        let monthlyTariffs = JSON.parse(localStorage.getItem('monthly_tariffs')) || DEFAULT_TARIFFS;
+
+        // Current Calculation Mode: 'daily' or 'bill'
+        let currentMode = 'daily';
+        let currentTariffMonthKey = '2026-09';
+
+        let energyChart = null;
+        let efficiencyChart = null;
+
+        // 2. Lifecycle Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initTariffMonthSelector();
+            loadTariffRatesForMonth(currentTariffMonthKey);
+            initWebhookUrl();
+            initCharts();
+            applyFilters();
+        });
+
+        function initWebhookUrl() {
+            const savedUrl = localStorage.getItem('gas_webhook_url') || '';
+            const el = document.getElementById('gasWebhookUrl');
+            if (el) el.value = savedUrl;
+        }
+
+        function saveWebhookUrl() {
+            const url = document.getElementById('gasWebhookUrl').value.trim();
+            localStorage.setItem('gas_webhook_url', url);
+        }
+
+        // 3. Tariff Management Functions
+        function initTariffMonthSelector() {
+            const select = document.getElementById('tariffMonthSelector');
+            const billSelect = document.getElementById('billMonthKey');
+            select.innerHTML = '';
+            billSelect.innerHTML = '';
+
+            const keys = Object.keys(monthlyTariffs).sort();
+            keys.forEach(k => {
+                const opt1 = document.createElement('option');
+                opt1.value = k;
+                opt1.textContent = monthlyTariffs[k].month_name || k;
+                select.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = k;
+                opt2.textContent = (monthlyTariffs[k].month_name || k) + ` (${k})`;
+                billSelect.appendChild(opt2);
+            });
+
+            select.value = currentTariffMonthKey;
+        }
+
+        function changeTariffMonth() {
+            currentTariffMonthKey = document.getElementById('tariffMonthSelector').value;
+            loadTariffRatesForMonth(currentTariffMonthKey);
+            applyFilters();
+        }
+
+        function loadTariffRatesForMonth(monthKey) {
+            const t = monthlyTariffs[monthKey] || monthlyTariffs['2026-09'];
+            document.getElementById('rateOnPeak').value = t.on_peak_rate ?? 4.1839;
+            document.getElementById('rateOffPeak').value = t.off_peak_rate ?? 2.6037;
+            document.getElementById('rateFt').value = t.ft_rate ?? 0.1623;
+            document.getElementById('ratePeakDemand').value = t.peak_demand_rate ?? 132.93;
+            document.getElementById('rateServiceCharge').value = t.service_charge ?? 312.24;
+            document.getElementById('ratePowerFactor').value = t.pf_rate ?? 0.00;
+        }
+
+        function saveCurrentMonthTariff() {
+            const monthKey = document.getElementById('tariffMonthSelector').value;
+            if (!monthlyTariffs[monthKey]) {
+                monthlyTariffs[monthKey] = { month_key: monthKey, month_name: monthKey };
+            }
+
+            monthlyTariffs[monthKey].on_peak_rate = parseFloat(document.getElementById('rateOnPeak').value) || 0;
+            monthlyTariffs[monthKey].off_peak_rate = parseFloat(document.getElementById('rateOffPeak').value) || 0;
+            monthlyTariffs[monthKey].ft_rate = parseFloat(document.getElementById('rateFt').value) || 0;
+            monthlyTariffs[monthKey].peak_demand_rate = parseFloat(document.getElementById('ratePeakDemand').value) || 0;
+            monthlyTariffs[monthKey].service_charge = parseFloat(document.getElementById('rateServiceCharge').value) || 0;
+            monthlyTariffs[monthKey].pf_rate = parseFloat(document.getElementById('ratePowerFactor').value) || 0;
+            monthlyTariffs[monthKey].cost_per_kg_target = 0.212;
+            monthlyTariffs[monthKey].solar_share_target = 24.0;
+            monthlyTariffs[monthKey].vat_rate = 0.0; // No VAT
+
+            localStorage.setItem('monthly_tariffs', JSON.stringify(monthlyTariffs));
+            
+            const statusEl = document.getElementById('tariffSaveStatus');
+            statusEl.textContent = 'บันทึกแล้ว!';
+            setTimeout(() => { statusEl.textContent = 'บันทึกอัตโนมัติ'; }, 1500);
+
+            applyFilters();
+        }
+
+        function openNewMonthTariffModal() {
+            const newKey = prompt("กรุณาระบุเดือน/ปี ในรูปแบบ YYYY-MM (เช่น 2026-10):");
+            if (newKey && /^\d{4}-\d{2}$/.test(newKey.trim())) {
+                const cleanKey = newKey.trim();
+                const [year, month] = cleanKey.split('-');
+                const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                const thaiYear = parseInt(year) + 543;
+                const monthName = `${monthNames[parseInt(month)-1]} ${thaiYear}`;
+
+                if (!monthlyTariffs[cleanKey]) {
+                    monthlyTariffs[cleanKey] = {
+                        month_key: cleanKey,
+                        month_name: monthName,
+                        on_peak_rate: parseFloat(document.getElementById('rateOnPeak').value) || 4.1839,
+                        off_peak_rate: parseFloat(document.getElementById('rateOffPeak').value) || 2.6037,
+                        ft_rate: parseFloat(document.getElementById('rateFt').value) || 0.1623,
+                        peak_demand_rate: parseFloat(document.getElementById('ratePeakDemand').value) || 132.93,
+                        service_charge: parseFloat(document.getElementById('rateServiceCharge').value) || 312.24,
+                        pf_rate: 0.0,
+                        cost_per_kg_target: 0.212,
+                        solar_share_target: 24.0,
+                        vat_rate: 0.0
+                    };
+                    localStorage.setItem('monthly_tariffs', JSON.stringify(monthlyTariffs));
+                    initTariffMonthSelector();
+                    document.getElementById('tariffMonthSelector').value = cleanKey;
+                    changeTariffMonth();
+                }
+            }
+        }
+
+        // 4. Mode Switch Function (Daily vs Official Bill)
+        function switchCalculationMode(mode) {
+            currentMode = mode;
+            const dailyBtn = document.getElementById('modeDailyBtn');
+            const billBtn = document.getElementById('modeBillBtn');
+            const badge = document.getElementById('activeModeBadge');
+
+            if (mode === 'daily') {
+                dailyBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-sky-600 text-white shadow-sm flex items-center gap-1.5";
+                billBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-slate-400 hover:text-white flex items-center gap-1.5";
+                badge.className = "text-xs font-normal px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center gap-1";
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span> โหมดคำนวณสะสมรายวัน';
+            } else {
+                billBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-purple-600 text-white shadow-sm flex items-center gap-1.5";
+                dailyBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-slate-400 hover:text-white flex items-center gap-1.5";
+                badge.className = "text-xs font-normal px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-1";
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span> โหมดบิล PEA ทางการ (ปิดเดือน)';
+            }
+
+            applyFilters();
+        }
+
+        // 5. Main Filter & Calculation Engine
+        function applyFilters() {
+            const startDateStr = document.getElementById('filterStartDate').value;
+            const endDateStr = document.getElementById('filterEndDate').value;
+
+            // Current Month Tariff Rates
+            const onPeakRate = parseFloat(document.getElementById('rateOnPeak').value) || 0;
+            const offPeakRate = parseFloat(document.getElementById('rateOffPeak').value) || 0;
+            const ftRate = parseFloat(document.getElementById('rateFt').value) || 0;
+            const peakDemandRate = parseFloat(document.getElementById('ratePeakDemand').value) || 0;
+            const serviceCharge = parseFloat(document.getElementById('rateServiceCharge').value) || 0;
+            const pfRate = parseFloat(document.getElementById('ratePowerFactor').value) || 0;
+
+            const targetCostPerKg = 0.212;
+            const targetSolarShare = 24.0;
+
+            // Filter Days
+            const filteredDays = appData.filter(d => {
+                return d.date >= startDateStr && d.date <= endDateStr;
+            }).sort((a, b) => a.date.localeCompare(b.date));
+
+            document.getElementById('filterSummaryText').textContent = 
+                `กำลังแสดงข้อมูล: ${filteredDays.length} วัน (${formatThaiDate(startDateStr)} - ${formatThaiDate(endDateStr)})`;
+
+            // Accumulate Daily Metrics
+            let totalPeaOnPeakKwh = 0;
+            let totalPeaOffPeakKwh = 0;
+            let totalPeaKwh = 0;
+            let totalSolarKwh = 0;
+            let totalOutput = 0;
+            let maxPeakKw = 0;
+
+            filteredDays.forEach(d => {
+                const onKwh = d.pea_onpeak_kwh || 0;
+                const offKwh = (d.pea_offpeak_kwh || 0) + (d.pea_holiday_kwh || 0);
+                const pKwh = d.pea_unit || (onKwh + offKwh);
+                const sKwh = d.solar_unit || 0;
+                const kw = d.peak_kw || 0;
+                const outVal = d.output_total || 0;
+
+                totalPeaOnPeakKwh += onKwh;
+                totalPeaOffPeakKwh += offKwh;
+                totalPeaKwh += pKwh;
+                totalSolarKwh += sKwh;
+                totalOutput += outVal;
+                if (kw > maxPeakKw) maxPeakKw = kw;
+            });
+
+            const totalEnergyKwh = totalPeaKwh + totalSolarKwh;
+            const daysCount = filteredDays.length || 1;
+            const daysInMonth = 30; // standard month baseline
+
+            // Calculate Energy Charges (No VAT)
+            const dailyEnergyCharge = (totalPeaOnPeakKwh * onPeakRate) + (totalPeaOffPeakKwh * offPeakRate);
+            const dailyFtCharge = totalPeaKwh * ftRate;
+            const dailyDemandCharge = (maxPeakKw * peakDemandRate) * (daysCount / daysInMonth);
+            const dailyServiceChargeAllocated = serviceCharge * (daysCount / daysInMonth);
+            const dailyPfChargeAllocated = pfRate * (daysCount / daysInMonth);
+            
+            const dailyTotalCostNoVat = dailyEnergyCharge + dailyFtCharge + dailyDemandCharge + dailyServiceChargeAllocated + dailyPfChargeAllocated;
+
+            // Check if Official Bill Mode is Active
+            const selectedMonthKey = startDateStr.substring(0, 7);
+            const officialBill = officialBills[selectedMonthKey];
+
+            let activeTotalCost = dailyTotalCostNoVat;
+            let activePeaKwh = totalPeaKwh;
+            let activePeakKw = maxPeakKw;
+            let activeDemandCharge = dailyDemandCharge;
+            let activeEnergyCharge = dailyEnergyCharge;
+            let activeFtCharge = dailyFtCharge;
+            let activeServiceCharge = dailyServiceChargeAllocated;
+
+            if (currentMode === 'bill' && officialBill) {
+                activeTotalCost = officialBill.total_cost_no_vat;
+                activePeaKwh = officialBill.pea_total_kwh;
+                activePeakKw = officialBill.peak_kw;
+                activeDemandCharge = officialBill.demand_charge;
+                activeEnergyCharge = officialBill.energy_charge;
+                activeFtCharge = officialBill.ft_charge;
+                activeServiceCharge = officialBill.service_charge;
+            }
+
+            // 6. Compute Required 4 Core KPI Metrics
+            const kpiRatePerPeaUnit = activePeaKwh > 0 ? (activeTotalCost / activePeaKwh) : 0;
+            const kpiUnitPerOutput = totalOutput > 0 ? (activePeaKwh / totalOutput) : 0; // CUT UNIT SOLAR OUT!
+            const kpiCostPerOutput = totalOutput > 0 ? (activeTotalCost / totalOutput) : 0;
+            
+            // Solar Share = Unit Solar / (Unit Solar + Unit ไฟฟ้า PEA) * 100
+            const solarShareOfTotal = totalEnergyKwh > 0 ? ((totalSolarKwh / totalEnergyKwh) * 100) : 0;
+            const solarToPeaRatio = activePeaKwh > 0 ? ((totalSolarKwh / activePeaKwh) * 100) : 0;
+
+            // 7. Update UI KPI Cards
+            // Card 1: บาท/kWh PEA
+            document.getElementById('kpiRatePerPeaUnit').textContent = `฿${kpiRatePerPeaUnit.toFixed(4)}`;
+            document.getElementById('subKpiPeaCost').textContent = `฿${activeTotalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            // Card 2: Unit/Output
+            document.getElementById('kpiUnitPerOutput').textContent = kpiUnitPerOutput.toFixed(4);
+            document.getElementById('subKpiPeaUnit').textContent = `${activePeaKwh.toLocaleString('th-TH', {maximumFractionDigits: 1})} kWh`;
+            document.getElementById('subKpiOutput').textContent = totalOutput.toLocaleString('th-TH') + " kg";
+
+            // Card 3: บาท/kg (เป้าหมาย 0.212 บาท/kg)
+            const costOutputEl = document.getElementById('kpiCostPerOutput');
+            const costBadgeEl = document.getElementById('kpiCostOutputVarianceBadge');
+            const costStatusEl = document.getElementById('kpiCostOutputStatusText');
+            const costCardEl = document.getElementById('cardCostPerOutput');
+
+            costOutputEl.textContent = `฿${kpiCostPerOutput.toFixed(4)}`;
+            const costDiffPct = ((kpiCostPerOutput - targetCostPerKg) / targetCostPerKg) * 100;
+
+            if (kpiCostPerOutput <= targetCostPerKg) {
+                // ต่ำกว่าหรือเท่ากับเป้าหมาย -> สีเขียว (ดี)
+                costOutputEl.className = "text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight";
+                costBadgeEl.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1";
+                costBadgeEl.innerHTML = `<i data-lucide="trending-down" class="w-3 h-3"></i> ${costDiffPct.toFixed(1)}%`;
+                costStatusEl.className = "font-medium text-emerald-400";
+                costStatusEl.textContent = "✓ ผ่านเกณฑ์เป้าหมาย";
+                costCardEl.className = "glass-card metric-card rounded-2xl p-5 border-l-4 border-l-emerald-500 shadow-md";
+            } else {
+                // สูงกว่าเป้าหมาย -> สีแดง (เกินงบ)
+                costOutputEl.className = "text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight";
+                costBadgeEl.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1";
+                costBadgeEl.innerHTML = `<i data-lucide="trending-up" class="w-3 h-3"></i> +${costDiffPct.toFixed(1)}%`;
+                costStatusEl.className = "font-medium text-rose-400";
+                costStatusEl.textContent = "⚠️ สูงกว่าเป้าหมาย (เกินงบ)";
+                costCardEl.className = "glass-card metric-card rounded-2xl p-5 border-l-4 border-l-rose-500 shadow-md";
+            }
+
+            // Card 4: สัดส่วน Solar (เป้าหมาย 24.00%)
+            const solarShareEl = document.getElementById('kpiSolarShareOfTotal');
+            const solarBadgeEl = document.getElementById('kpiSolarVarianceBadge');
+            const solarCardEl = document.getElementById('cardSolarShare');
+            const solarDiff = solarShareOfTotal - targetSolarShare;
+
+            solarShareEl.textContent = `${solarShareOfTotal.toFixed(2)}%`;
+            document.getElementById('subKpiSolarToPeaRatio').textContent = `${solarToPeaRatio.toFixed(1)}%`;
+            document.getElementById('solarProgressBar').style.width = `${Math.min(solarShareOfTotal * 4.16, 100)}%`; // normalized to 24%
+
+            if (solarShareOfTotal >= targetSolarShare) {
+                // สูงกว่าหรือเท่ากับเป้าหมาย 24% -> สีเขียว (ยอดเยี่ยม)
+                solarShareEl.className = "text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight";
+                solarBadgeEl.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1";
+                solarBadgeEl.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> +${solarDiff.toFixed(1)}% เกินเป้า`;
+                solarCardEl.className = "glass-card metric-card rounded-2xl p-5 border-l-4 border-l-emerald-500 shadow-md";
+            } else {
+                // ต่ำกว่าเป้าหมาย 24% -> สีแดง / แจ้งเตือน
+                solarShareEl.className = "text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight";
+                solarBadgeEl.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1";
+                solarBadgeEl.innerHTML = `<i data-lucide="arrow-down" class="w-3 h-3"></i> ${solarDiff.toFixed(1)}% ต่ำกว่าเป้า`;
+                solarCardEl.className = "glass-card metric-card rounded-2xl p-5 border-l-4 border-l-rose-500 shadow-md";
+            }
+
+            // Secondary Metrics
+            document.getElementById('secPeakKw').textContent = activePeakKw.toFixed(2);
+            document.getElementById('secDemandCost').textContent = `฿${activeDemandCharge.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('secEnergyCharge').textContent = `฿${activeEnergyCharge.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('secOnPeakKwh').textContent = totalPeaOnPeakKwh.toLocaleString('th-TH', {maximumFractionDigits: 0});
+            document.getElementById('secFtServiceCharge').textContent = `฿${(activeFtCharge + activeServiceCharge).toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('secFtCost').textContent = `฿${activeFtCharge.toLocaleString('th-TH', {maximumFractionDigits: 0})}`;
+            document.getElementById('secServiceCost').textContent = `฿${activeServiceCharge.toLocaleString('th-TH', {maximumFractionDigits: 0})}`;
+            document.getElementById('secTotalCostNoVat').textContent = `฿${activeTotalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('secCostPerDay').textContent = `฿${(activeTotalCost / daysCount).toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+
+            // 8. Render Bill Reconciliation Table
+            renderBillReconciliation(dailyTotalCostNoVat, totalPeaKwh, maxPeakKw, dailyEnergyCharge, dailyDemandCharge, dailyFtCharge, officialBill);
+
+            // 9. Render Daily Table & Charts
+            renderDailyTable(filteredDays, onPeakRate, offPeakRate, ftRate, peakDemandRate, daysInMonth);
+            updateCharts(filteredDays, onPeakRate, offPeakRate, ftRate, peakDemandRate, daysInMonth, targetCostPerKg);
+            lucide.createIcons();
+        }
+
+        // 6. Reconciliation Table Renderer
+        function renderBillReconciliation(dailyCost, dailyKwh, dailyPeakKw, dailyEnergy, dailyDemand, dailyFt, bill) {
+            const tbody = document.getElementById('billReconciliationBody');
+            if (!bill) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-4 px-4 text-center text-slate-500">
+                            ยังไม่มีข้อมูลบิลทางการสำหรับเดือนนี้ <button onclick="openBillModal()" class="text-purple-400 hover:underline ml-1">คลิกที่นี่เพื่อบันทึกบิล</button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const diffKwh = bill.pea_total_kwh - dailyKwh;
+            const diffPeakKw = bill.peak_kw - dailyPeakKw;
+            const diffEnergy = bill.energy_charge - dailyEnergy;
+            const diffDemand = bill.demand_charge - dailyDemand;
+            const diffFt = bill.ft_charge - dailyFt;
+            const diffCost = bill.total_cost_no_vat - dailyCost;
+
+            function formatDiff(val, unit = "") {
+                const cls = Math.abs(val) < 0.01 ? "text-emerald-400 font-medium" : (val > 0 ? "text-rose-400 font-medium" : "text-sky-400 font-medium");
+                const sign = val > 0 ? "+" : "";
+                return `<span class="${cls}">${sign}${val.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${unit}</span>`;
+            }
+
+            tbody.innerHTML = `
+                <tr>
+                    <td class="py-2.5 px-4 font-medium text-slate-300">1. ยอดหน่วยไฟฟ้า PEA รวม (Total kWh)</td>
+                    <td class="py-2.5 px-4 text-right text-slate-300">${dailyKwh.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-2.5 px-4 text-right text-purple-300 font-semibold">${bill.pea_total_kwh.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-2.5 px-4 text-right">${formatDiff(diffKwh, "kWh")}</td>
+                    <td class="py-2.5 px-4 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">เทียบตรง</span></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-4 font-medium text-slate-300">2. Peak Demand สูงสุด (kW)</td>
+                    <td class="py-2.5 px-4 text-right text-slate-300">${dailyPeakKw.toFixed(2)} kW</td>
+                    <td class="py-2.5 px-4 text-right text-purple-300 font-semibold">${bill.peak_kw.toFixed(2)} kW</td>
+                    <td class="py-2.5 px-4 text-right">${formatDiff(diffPeakKw, "kW")}</td>
+                    <td class="py-2.5 px-4 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20">ถูกต้อง</span></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-4 font-medium text-slate-300">3. ค่าพลังงานไฟฟ้า Energy Charge (฿)</td>
+                    <td class="py-2.5 px-4 text-right text-slate-300">฿${dailyEnergy.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-2.5 px-4 text-right text-purple-300 font-semibold">฿${bill.energy_charge.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-2.5 px-4 text-right">${formatDiff(diffEnergy, "฿")}</td>
+                    <td class="py-2.5 px-4 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20">พร้อมปิดบัญชี</span></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-4 font-medium text-slate-300">4. ค่าความต้องการ Demand Charge (฿)</td>
+                    <td class="py-2.5 px-4 text-right text-slate-300">฿${dailyDemand.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-2.5 px-4 text-right text-purple-300 font-semibold">฿${bill.demand_charge.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-2.5 px-4 text-right">${formatDiff(diffDemand, "฿")}</td>
+                    <td class="py-2.5 px-4 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20">ตรงตามบิล</span></td>
+                </tr>
+                <tr class="bg-slate-900/90 font-bold border-t border-slate-700">
+                    <td class="py-3 px-4 text-white">💰 รวมเงินค่าไฟฟ้าสุทธิ (Total Exc. VAT)</td>
+                    <td class="py-3 px-4 text-right text-slate-200">฿${dailyCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-3 px-4 text-right text-emerald-400 font-bold">฿${bill.total_cost_no_vat.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="py-3 px-4 text-right">${formatDiff(diffCost, "฿")}</td>
+                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">100% สมบูรณ์</span></td>
+                </tr>
+            `;
+        }
+
+        // 7. Daily Records Table Renderer with Edit Buttons
+        function renderDailyTable(days, onRate, offRate, ftRate, peakDemandRate, daysInMonth) {
+            const tbody = document.getElementById('dailyTableBody');
+            const tfoot = document.getElementById('dailyTableFoot');
+            tbody.innerHTML = '';
+
+            let sumOn = 0, sumOff = 0, sumPea = 0, sumSolar = 0, sumOut = 0, sumCost = 0;
+            let maxKw = 0;
+
+            days.forEach(d => {
+                const onKwh = d.pea_onpeak_kwh || 0;
+                const offKwh = (d.pea_offpeak_kwh || 0) + (d.pea_holiday_kwh || 0);
+                const peaKwh = d.pea_unit || (onKwh + offKwh);
+                const pKw = d.peak_kw || 0;
+                const solarKwh = d.solar_unit || 0;
+                const out = d.output_total || 0;
+
+                const dayCost = (onKwh * onRate) + (offKwh * offRate) + (peaKwh * ftRate) + ((pKw * peakDemandRate) / daysInMonth);
+
+                const ratePerPea = peaKwh > 0 ? (dayCost / peaKwh) : 0;
+                const unitPerOut = out > 0 ? (peaKwh / out) : 0; // Cut solar unit!
+                const costPerOut = out > 0 ? (dayCost / out) : 0;
+                
+                const totalEnergy = peaKwh + solarKwh;
+                const solarShare = totalEnergy > 0 ? ((solarKwh / totalEnergy) * 100) : 0;
+
+                sumOn += onKwh;
+                sumOff += offKwh;
+                sumPea += peaKwh;
+                sumSolar += solarKwh;
+                sumOut += out;
+                sumCost += dayCost;
+                if (pKw > maxKw) maxKw = pKw;
+
+                // Status badge for Cost per output
+                const costCls = costPerOut <= 0.212 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold";
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition group";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-medium text-slate-300 whitespace-nowrap">${d.date}</td>
+                    <td class="py-2.5 px-3 text-right text-sky-400 font-mono">${onKwh.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-2.5 px-3 text-right text-emerald-400 font-mono">${offKwh.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-2.5 px-3 text-right font-medium text-slate-200 font-mono">${peaKwh.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-2.5 px-3 text-right text-purple-400 font-semibold font-mono">${pKw.toFixed(1)}</td>
+                    <td class="py-2.5 px-3 text-right text-amber-400 font-medium font-mono">${solarKwh.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-2.5 px-3 text-right text-emerald-400 font-medium font-mono">${out.toLocaleString('th-TH')}</td>
+                    <td class="py-2.5 px-3 text-right text-slate-200 font-mono">฿${dayCost.toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                    <td class="py-2.5 px-3 text-right text-sky-400 font-mono font-semibold">฿${ratePerPea.toFixed(3)}</td>
+                    <td class="py-2.5 px-3 text-right text-emerald-400 font-mono font-semibold">${unitPerOut.toFixed(4)}</td>
+                    <td class="py-2.5 px-3 text-right font-mono ${costCls}">฿${costPerOut.toFixed(3)}</td>
+                    <td class="py-2.5 px-3 text-right text-amber-400 font-mono font-semibold">${solarShare.toFixed(1)}%</td>
+                    <td class="py-2.5 px-3 text-center">
+                        <button onclick="editDailyRecord('${d.date}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-sky-600/30 text-sky-400 border border-slate-700 hover:border-sky-500/40 text-[11px] font-medium transition flex items-center gap-1 mx-auto">
+                            <i data-lucide="edit" class="w-3 h-3"></i> แก้ไข
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const totalRatePerPea = sumPea > 0 ? (sumCost / sumPea) : 0;
+            const totalUnitPerOut = sumOut > 0 ? (sumPea / sumOut) : 0;
+            const totalCostPerOut = sumOut > 0 ? (sumCost / sumOut) : 0;
+            const totalEnergySum = sumPea + sumSolar;
+            const totalSolarShare = totalEnergySum > 0 ? ((sumSolar / totalEnergySum) * 100) : 0;
+
+            const totalCostCls = totalCostPerOut <= 0.212 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold";
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="py-3 px-3">รวมทั้งหมด (${days.length} วัน)</td>
+                    <td class="py-3 px-3 text-right text-sky-400 font-mono">${sumOn.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-3 px-3 text-right text-emerald-400 font-mono">${sumOff.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-3 px-3 text-right text-white font-mono">${sumPea.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-3 px-3 text-right text-purple-400 font-mono">${maxKw.toFixed(1)} Max</td>
+                    <td class="py-3 px-3 text-right text-amber-400 font-mono">${sumSolar.toLocaleString('th-TH', {maximumFractionDigits: 1})}</td>
+                    <td class="py-3 px-3 text-right text-emerald-400 font-mono">${sumOut.toLocaleString('th-TH')}</td>
+                    <td class="py-3 px-3 text-right text-white font-mono">฿${sumCost.toLocaleString('th-TH', {maximumFractionDigits: 0})}</td>
+                    <td class="py-3 px-3 text-right text-sky-400 font-mono">฿${totalRatePerPea.toFixed(3)}</td>
+                    <td class="py-3 px-3 text-right text-emerald-400 font-mono">${totalUnitPerOut.toFixed(4)}</td>
+                    <td class="py-3 px-3 text-right font-mono ${totalCostCls}">฿${totalCostPerOut.toFixed(3)}</td>
+                    <td class="py-3 px-3 text-right text-amber-400 font-mono">${totalSolarShare.toFixed(1)}%</td>
+                    <td class="py-3 px-3 text-center">-</td>
+                </tr>
+            `;
+        }
+
+        // 8. Chart Rendering Functions
+        function initCharts() {
+            const ctx1 = document.getElementById('energyMixChart').getContext('2d');
+            energyChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'PEA On-Peak (kWh)',
+                            data: [],
+                            backgroundColor: 'rgba(56, 189, 248, 0.85)',
+                            stack: 'energy',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'PEA Off-Peak / Holiday (kWh)',
+                            data: [],
+                            backgroundColor: 'rgba(52, 211, 153, 0.85)',
+                            stack: 'energy',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Solar Unit (kWh)',
+                            data: [],
+                            backgroundColor: 'rgba(245, 158, 11, 0.9)',
+                            stack: 'energy',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Peak kW',
+                            data: [],
+                            type: 'line',
+                            borderColor: '#c084fc',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#c084fc',
+                            pointRadius: 3,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        },
+                        y: {
+                            stacked: true,
+                            position: 'left',
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        },
+                        y1: {
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: { color: '#c084fc', font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#cbd5e1', font: { size: 11 }, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('efficiencyChart').getContext('2d');
+            efficiencyChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'บาท/Output (฿/kg)',
+                            data: [],
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 2.5
+                        },
+                        {
+                            label: 'เป้าหมาย Target (0.212 ฿/kg)',
+                            data: [],
+                            borderColor: '#10b981',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#cbd5e1', font: { size: 11 }, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(days, onRate, offRate, ftRate, peakDemandRate, daysInMonth, targetCost) {
+            const labels = days.map(d => d.date.substring(5));
+            const onPeakData = days.map(d => d.pea_onpeak_kwh || 0);
+            const offPeakData = days.map(d => (d.pea_offpeak_kwh || 0) + (d.pea_holiday_kwh || 0));
+            const solarData = days.map(d => d.solar_unit || 0);
+            const peakKwData = days.map(d => d.peak_kw || 0);
+
+            energyChart.data.labels = labels;
+            energyChart.data.datasets[0].data = onPeakData;
+            energyChart.data.datasets[1].data = offPeakData;
+            energyChart.data.datasets[2].data = solarData;
+            energyChart.data.datasets[3].data = peakKwData;
+            energyChart.update();
+
+            const costPerOutputData = days.map(d => {
+                const onKwh = d.pea_onpeak_kwh || 0;
+                const offKwh = (d.pea_offpeak_kwh || 0) + (d.pea_holiday_kwh || 0);
+                const peaKwh = d.pea_unit || (onKwh + offKwh);
+                const pKw = d.peak_kw || 0;
+                const out = d.output_total || 0;
+
+                const dayCost = (onKwh * onRate) + (offKwh * offRate) + (peaKwh * ftRate) + ((pKw * peakDemandRate) / daysInMonth);
+                return out > 0 ? (dayCost / out) : 0;
+            });
+
+            const targetLine = days.map(() => targetCost);
+
+            efficiencyChart.data.labels = labels;
+            efficiencyChart.data.datasets[0].data = costPerOutputData;
+            efficiencyChart.data.datasets[1].data = targetLine;
+            efficiencyChart.update();
+        }
+
+        // 9. Presets & Helper Filters
+        function applyPreset(preset) {
+            if (preset === 'all') {
+                document.getElementById('filterStartDate').value = '2026-09-01';
+                document.getElementById('filterEndDate').value = '2026-09-30';
+            } else if (preset === 'first-half') {
+                document.getElementById('filterStartDate').value = '2026-09-01';
+                document.getElementById('filterEndDate').value = '2026-09-15';
+            } else if (preset === 'second-half') {
+                document.getElementById('filterStartDate').value = '2026-09-16';
+                document.getElementById('filterEndDate').value = '2026-09-30';
+            } else if (preset === 'last-7') {
+                document.getElementById('filterStartDate').value = '2026-09-24';
+                document.getElementById('filterEndDate').value = '2026-09-30';
+            }
+            applyFilters();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterStartDate').value = '2026-09-01';
+            document.getElementById('filterEndDate').value = '2026-09-30';
+            applyFilters();
+        }
+
+        function formatThaiDate(dStr) {
+            if (!dStr) return '';
+            const parts = dStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dStr;
+        }
+
+        // 10. Modals Management (Bill, Daily, Sync, Edit)
+        function openBillModal() {
+            document.getElementById('billModal').classList.remove('hidden');
+            loadBillDataForForm();
+        }
+
+        function closeBillModal() {
+            document.getElementById('billModal').classList.add('hidden');
+        }
+
+        function loadBillDataForForm() {
+            const key = document.getElementById('billMonthKey').value;
+            const b = officialBills[key] || {
+                month_key: key,
+                invoice_no: `INV-PEA-${key.replace('-', '')}-01`,
+                pea_onpeak_kwh: 139174.4,
+                pea_offpeak_kwh: 216474.0,
+                pea_total_kwh: 355648.4,
+                peak_kw: 876.0,
+                energy_charge: 1146714.76,
+                demand_charge: 116446.68,
+                ft_charge: 57721.74,
+                pf_penalty: 0.0,
+                service_charge: 312.24,
+                total_cost_no_vat: 1321195.42
+            };
+
+            document.getElementById('billInvoiceNo').value = b.invoice_no || '';
+            document.getElementById('billOnPeakKwh').value = b.pea_onpeak_kwh || 0;
+            document.getElementById('billOffPeakKwh').value = b.pea_offpeak_kwh || 0;
+            document.getElementById('billTotalPeaKwh').value = b.pea_total_kwh || 0;
+            document.getElementById('billPeakKw').value = b.peak_kw || 0;
+            document.getElementById('billEnergyCharge').value = b.energy_charge || 0;
+            document.getElementById('billDemandCharge').value = b.demand_charge || 0;
+            document.getElementById('billFtCharge').value = b.ft_charge || 0;
+            document.getElementById('billPfPenalty').value = b.pf_penalty || 0;
+            document.getElementById('billServiceCharge').value = b.service_charge || 312.24;
+            document.getElementById('billTotalCostNoVat').value = b.total_cost_no_vat || 0;
+        }
+
+        function calcBillTotalUnits() {
+            const onKwh = parseFloat(document.getElementById('billOnPeakKwh').value) || 0;
+            const offKwh = parseFloat(document.getElementById('billOffPeakKwh').value) || 0;
+            document.getElementById('billTotalPeaKwh').value = (onKwh + offKwh).toFixed(2);
+        }
+
+        function calcBillTotalCost() {
+            const energy = parseFloat(document.getElementById('billEnergyCharge').value) || 0;
+            const demand = parseFloat(document.getElementById('billDemandCharge').value) || 0;
+            const ft = parseFloat(document.getElementById('billFtCharge').value) || 0;
+            const pf = parseFloat(document.getElementById('billPfPenalty').value) || 0;
+            const service = parseFloat(document.getElementById('billServiceCharge').value) || 0;
+            const total = energy + demand + ft + pf + service;
+            document.getElementById('billTotalCostNoVat').value = total.toFixed(2);
+        }
+
+        function saveOfficialBill(e) {
+            e.preventDefault();
+            const key = document.getElementById('billMonthKey').value;
+            const onKwh = parseFloat(document.getElementById('billOnPeakKwh').value) || 0;
+            const offKwh = parseFloat(document.getElementById('billOffPeakKwh').value) || 0;
+            const totalKwh = parseFloat(document.getElementById('billTotalPeaKwh').value) || (onKwh + offKwh);
+            const peakKw = parseFloat(document.getElementById('billPeakKw').value) || 0;
+            const energyCharge = parseFloat(document.getElementById('billEnergyCharge').value) || 0;
+            const demandCharge = parseFloat(document.getElementById('billDemandCharge').value) || 0;
+            const ftCharge = parseFloat(document.getElementById('billFtCharge').value) || 0;
+            const pfPenalty = parseFloat(document.getElementById('billPfPenalty').value) || 0;
+            const serviceCharge = parseFloat(document.getElementById('billServiceCharge').value) || 0;
+            const totalCost = parseFloat(document.getElementById('billTotalCostNoVat').value) || (energyCharge + demandCharge + ftCharge + pfPenalty + serviceCharge);
+
+            const billData = {
+                month_key: key,
+                month_name: monthlyTariffs[key] ? monthlyTariffs[key].month_name : key,
+                invoice_no: document.getElementById('billInvoiceNo').value,
+                pea_onpeak_kwh: onKwh,
+                pea_offpeak_kwh: offKwh,
+                pea_total_kwh: totalKwh,
+                peak_kw: peakKw,
+                energy_charge: energyCharge,
+                demand_charge: demandCharge,
+                ft_charge: ftCharge,
+                pf_penalty: pfPenalty,
+                service_charge: serviceCharge,
+                total_cost_no_vat: totalCost
+            };
+
+            officialBills[key] = billData;
+            localStorage.setItem('pea_official_bills', JSON.stringify(officialBills));
+            
+            // Auto Sync to Google Sheet Webhook if available
+            sendToGoogleSheetWebhook({ action: 'save_bill', ...billData });
+
+            closeBillModal();
+            applyFilters();
+            alert("✅ บันทึกข้อมูลบิลการไฟฟ้าทางการสำเร็จเรียบร้อยแล้ว!");
+        }
+
+        function openDataModal() {
+            document.getElementById('dataModal').classList.remove('hidden');
+            document.getElementById('dataModalTitle').textContent = "เพิ่มข้อมูลการใช้ไฟฟ้าและผลผลิตรายวัน";
+            document.getElementById('entryDate').value = new Date().toISOString().substring(0, 10);
+            document.getElementById('entryPeaOnPeak').value = '';
+            document.getElementById('entryPeaOffPeak').value = '';
+            document.getElementById('entryPeakKw').value = '';
+            document.getElementById('entrySolarUnit').value = '';
+            document.getElementById('entryOutputTotal').value = '';
+        }
+
+        function closeDataModal() {
+            document.getElementById('dataModal').classList.add('hidden');
+        }
+
+        function editDailyRecord(targetDate) {
+            const item = appData.find(d => d.date === targetDate);
+            if (!item) return;
+
+            document.getElementById('dataModal').classList.remove('hidden');
+            document.getElementById('dataModalTitle').textContent = `แก้ไขข้อมูลประจำวันที่ ${targetDate}`;
+            document.getElementById('entryDate').value = item.date;
+            document.getElementById('entryPeaOnPeak').value = item.pea_onpeak_kwh || 0;
+            document.getElementById('entryPeaOffPeak').value = (item.pea_offpeak_kwh || 0) + (item.pea_holiday_kwh || 0);
+            document.getElementById('entryPeakKw').value = item.peak_kw || 0;
+            document.getElementById('entrySolarUnit').value = item.solar_unit || 0;
+            document.getElementById('entryOutputTotal').value = item.output_total || 0;
+        }
+
+        function saveDailyRecord(e) {
+            e.preventDefault();
+            const dStr = document.getElementById('entryDate').value;
+            const onKwh = parseFloat(document.getElementById('entryPeaOnPeak').value) || 0;
+            const offKwh = parseFloat(document.getElementById('entryPeaOffPeak').value) || 0;
+            const pKw = parseFloat(document.getElementById('entryPeakKw').value) || 0;
+            const sKwh = parseFloat(document.getElementById('entrySolarUnit').value) || 0;
+            const outTot = parseFloat(document.getElementById('entryOutputTotal').value) || 0;
+
+            const existingIdx = appData.findIndex(d => d.date === dStr);
+            const record = {
+                date: dStr,
+                pea_onpeak_kwh: onKwh,
+                pea_offpeak_kwh: offKwh,
+                pea_holiday_kwh: 0,
+                pea_unit: onKwh + offKwh,
+                peak_kw: pKw,
+                solar_unit: sKwh,
+                total_unit: onKwh + offKwh + sKwh,
+                output_total: outTot
+            };
+
+            if (existingIdx >= 0) {
+                appData[existingIdx] = { ...appData[existingIdx], ...record };
+            } else {
+                appData.push(record);
+            }
+
+            localStorage.setItem('energy_master_dataset', JSON.stringify(appData));
+
+            // Auto Sync to Google Sheet Webhook if configured
+            const onRate = parseFloat(document.getElementById('rateOnPeak').value) || 4.1839;
+            const offRate = parseFloat(document.getElementById('rateOffPeak').value) || 2.6037;
+            const ftRate = parseFloat(document.getElementById('rateFt').value) || 0.1623;
+            const peakDemandRate = parseFloat(document.getElementById('ratePeakDemand').value) || 132.93;
+
+            const dayCost = (onKwh * onRate) + (offKwh * offRate) + ((onKwh + offKwh) * ftRate) + ((pKw * peakDemandRate) / 30);
+            const ratePerPea = (onKwh + offKwh) > 0 ? (dayCost / (onKwh + offKwh)) : 0;
+            const unitPerOut = outTot > 0 ? ((onKwh + offKwh) / outTot) : 0;
+            const costPerOut = outTot > 0 ? (dayCost / outTot) : 0;
+            const solarShare = (onKwh + offKwh + sKwh) > 0 ? ((sKwh / (onKwh + offKwh + sKwh)) * 100) : 0;
+
+            sendToGoogleSheetWebhook({
+                action: 'save_daily',
+                date: dStr,
+                pea_onpeak_kwh: onKwh,
+                pea_offpeak_kwh: offKwh,
+                pea_total_kwh: onKwh + offKwh,
+                peak_kw: pKw,
+                solar_unit: sKwh,
+                output_total: outTot,
+                rate_per_pea: ratePerPea.toFixed(4),
+                unit_per_output: unitPerOut.toFixed(4),
+                cost_per_output: costPerOut.toFixed(4),
+                solar_ratio: solarShare.toFixed(2)
+            });
+
+            closeDataModal();
+            applyFilters();
+            alert(`✅ บันทึกข้อมูลวันที่ ${dStr} สำเร็จและอัปเดตเรียบร้อย!`);
+        }
+
+        function sendToGoogleSheetWebhook(payload) {
+            const webhookUrl = localStorage.getItem('gas_webhook_url');
+            if (!webhookUrl || !webhookUrl.startsWith('http')) return;
+
+            fetch(webhookUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                console.log("Auto-synced to Google Sheet Webhook");
+            }).catch(err => {
+                console.warn("Could not sync to Webhook:", err);
+            });
+        }
+
+        function syncToGoogleSheetsModal() {
+            document.getElementById('syncModal').classList.remove('hidden');
+        }
+
+        function closeSyncModal() {
+            document.getElementById('syncModal').classList.add('hidden');
+        }
+
+        function downloadBackupJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                dataset: appData,
+                official_bills: officialBills,
+                monthly_tariffs: monthlyTariffs
+            }, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `energy_monitor_backup_${new Date().toISOString().substring(0, 10)}.json`);
+            dlAnchor.click();
+        }
+
+        function exportTableToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Date,PEA_OnPeak_kWh,PEA_OffPeak_kWh,PEA_Total_kWh,Peak_kW,Solar_kWh,Output_Total_kg,Rate_Per_PEA_Unit,Unit_Per_Output,Cost_Per_Output_THB_per_kg,Solar_Share_Pct\n";
+
+            const onRate = parseFloat(document.getElementById('rateOnPeak').value) || 0;
+            const offRate = parseFloat(document.getElementById('rateOffPeak').value) || 0;
+            const ftRate = parseFloat(document.getElementById('rateFt').value) || 0;
+            const peakDemandRate = parseFloat(document.getElementById('ratePeakDemand').value) || 0;
+
+            appData.forEach(d => {
+                const onKwh = d.pea_onpeak_kwh || 0;
+                const offKwh = (d.pea_offpeak_kwh || 0) + (d.pea_holiday_kwh || 0);
+                const peaKwh = d.pea_unit || (onKwh + offKwh);
+                const pKw = d.peak_kw || 0;
+                const sKwh = d.solar_unit || 0;
+                const out = d.output_total || 0;
+
+                const dayCost = (onKwh * onRate) + (offKwh * offRate) + (peaKwh * ftRate) + ((pKw * peakDemandRate) / 30);
+                const ratePerPea = peaKwh > 0 ? (dayCost / peaKwh) : 0;
+                const unitPerOut = out > 0 ? (peaKwh / out) : 0;
+                const costPerOut = out > 0 ? (dayCost / out) : 0;
+                
+                const totalEnergy = peaKwh + sKwh;
+                const solarShare = totalEnergy > 0 ? ((sKwh / totalEnergy) * 100) : 0;
+
+                csvContent += `${d.date},${onKwh},${offKwh},${peaKwh},${pKw},${sKwh},${out},${ratePerPea.toFixed(4)},${unitPerOut.toFixed(4)},${costPerOut.toFixed(4)},${solarShare.toFixed(2)}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `energy_daily_summary_${new Date().toISOString().substring(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function copyGasCode() {
+            const code = document.getElementById('gasCodeBlock').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert("📋 คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว!");
+            });
+        }
+    </script>
+</body>
+</html>

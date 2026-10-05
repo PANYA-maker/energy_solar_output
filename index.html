@@ -787,6 +787,8 @@
         const DEFAULT_TARIFFS = {"2026-09": {"month_key": "2026-09", "month_name": "กันยายน 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}, "2026-10": {"month_key": "2026-10", "month_name": "ตุลาคม 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}};
         let monthlyTariffs = JSON.parse(localStorage.getItem('monthly_tariffs')) || DEFAULT_TARIFFS;
 
+        const DEFAULT_GAS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzQAGJIgIrErVEHZj4ixKdAhNVgxrCnyaKGUGz7bBRwj_EQvaFP3fuuCLEbNBAGSlmW/exec';
+
         // Current Calculation Mode: 'daily' or 'bill'
         let currentMode = 'daily';
         let currentTariffMonthKey = '2026-09';
@@ -794,6 +796,42 @@
         let energyChart = null;
         let efficiencyChart = null;
         let stackedSolarChart = null;
+
+        function getWebhookUrl() {
+            const saved = localStorage.getItem('gas_webhook_url');
+            return (saved && saved.trim()) ? saved.trim() : DEFAULT_GAS_WEBHOOK_URL;
+        }
+
+        function normalizeDateStr(dateInput) {
+            if (!dateInput) return '';
+            const strVal = String(dateInput).trim();
+            if (/^\d4-\d2-\d2$/.test(strVal)) {
+                return strVal;
+            }
+            const d = new Date(strVal);
+            if (!isNaN(d.getTime())) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            return strVal.substring(0, 10);
+        }
+
+        function normalizeMonthKey(keyInput) {
+            if (!keyInput) return '';
+            const strVal = String(keyInput).trim();
+            if (/^\d4-\d2$/.test(strVal)) {
+                return strVal;
+            }
+            const d = new Date(strVal);
+            if (!isNaN(d.getTime())) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                return `${year}-${month}`;
+            }
+            return strVal.substring(0, 7);
+        }
 
         // 2. Lifecycle Initialization
         document.addEventListener('DOMContentLoaded', () => {
@@ -809,20 +847,20 @@
         });
 
         function initWebhookUrl() {
-            const savedUrl = localStorage.getItem('gas_webhook_url') || '';
+            const url = getWebhookUrl();
             const el = document.getElementById('gasWebhookUrl');
-            if (el) el.value = savedUrl;
+            if (el) el.value = url;
         }
 
         function saveWebhookUrl() {
             const url = document.getElementById('gasWebhookUrl').value.trim();
-            localStorage.setItem('gas_webhook_url', url);
-            if (url) fetchLiveGoogleSheetData(true);
+            localStorage.setItem('gas_webhook_url', url || DEFAULT_GAS_WEBHOOK_URL);
+            fetchLiveGoogleSheetData(true);
         }
 
         // 3. Live Google Sheet Data Fetcher
         function fetchLiveGoogleSheetData(showNotification) {
-            const webhookUrl = localStorage.getItem('gas_webhook_url');
+            const webhookUrl = getWebhookUrl();
             const indicator = document.getElementById('syncLiveIndicator');
             
             if (!webhookUrl || !webhookUrl.startsWith('http')) {
@@ -842,9 +880,12 @@
                 .then(res => {
                     if (res && res.status === "success" && Array.isArray(res.dataset) && res.dataset.length > 0) {
                         // Merge Google Sheet records into appData (Avoid duplicate by date)
-                        res.dataset.forEach(row => {
-                            if (!row.date) return;
-                            const idx = appData.findIndex(d => d.date === row.date);
+                        res.dataset.forEach(rawRow => {
+                            if (!rawRow || !rawRow.date) return;
+                            const cleanDate = normalizeDateStr(rawRow.date);
+                            if (!cleanDate) return;
+                            const row = { ...rawRow, date: cleanDate };
+                            const idx = appData.findIndex(d => d.date === cleanDate);
                             if (idx >= 0) {
                                 appData[idx] = { ...appData[idx], ...row };
                             } else {
@@ -854,7 +895,17 @@
 
                         // Also merge Tariffs if returned
                         if (res.tariffs && Object.keys(res.tariffs).length > 0) {
-                            monthlyTariffs = { ...monthlyTariffs, ...res.tariffs };
+                            Object.keys(res.tariffs).forEach(rawKey => {
+                                const normKey = normalizeMonthKey(rawKey) || rawKey;
+                                const tariffObj = res.tariffs[rawKey];
+                                monthlyTariffs[normKey] = {
+                                    ...tariffObj,
+                                    month_key: normKey,
+                                    month_name: (tariffObj.month_name && !tariffObj.month_name.includes('T') && !tariffObj.month_name.includes('GMT')) 
+                                        ? tariffObj.month_name 
+                                        : `เดือน ${normKey}`
+                                };
+                            });
                             localStorage.setItem('monthly_tariffs', JSON.stringify(monthlyTariffs));
                             initTariffMonthSelector();
                         }
@@ -1844,7 +1895,7 @@
         }
 
         function sendToGoogleSheetWebhook(payload) {
-            const webhookUrl = localStorage.getItem('gas_webhook_url');
+            const webhookUrl = getWebhookUrl();
             if (!webhookUrl || !webhookUrl.startsWith('http')) return;
 
             fetch(webhookUrl, {

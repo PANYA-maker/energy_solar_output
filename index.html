@@ -148,9 +148,10 @@
                         <h2 class="text-sm font-semibold text-slate-200">ตัวกรองช่วงวันที่ (Data Filter)</h2>
                     </div>
                     <!-- Quick Presets -->
-                    <div class="flex items-center space-x-1.5 text-xs flex-wrap">
+                    <div class="flex items-center space-x-1.5 text-xs flex-wrap gap-y-1">
                         <button onclick="applyPreset('sep')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">ก.ย. 69</button>
                         <button onclick="applyPreset('oct')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">ต.ค. 69</button>
+                        <button onclick="applyPreset('nov')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">พ.ย. 69</button>
                         <button onclick="applyPreset('all')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">ทั้งหมด</button>
                         <button onclick="applyPreset('last-7')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/50">7 วันล่าสุด</button>
                     </div>
@@ -717,11 +718,18 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                    <button type="button" onclick="closeDataModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-md flex items-center gap-1.5">
-                        <i data-lucide="save" class="w-4 h-4"></i> บันทึกข้อมูล
-                    </button>
+                <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                    <div>
+                        <button type="button" id="modalDeleteBtn" onclick="deleteFromEditModal()" class="hidden px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 transition font-medium flex items-center gap-1.5">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i> ลบรายการวันนี้
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="closeDataModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition font-medium">ยกเลิก</button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-md flex items-center gap-1.5">
+                            <i data-lucide="save" class="w-4 h-4"></i> บันทึกข้อมูล
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -784,7 +792,7 @@
         const DEFAULT_BILLS = {"2026-09": {"month_key": "2026-09", "month_name": "กันยายน 2569", "invoice_no": "INV-PEA-202609-01", "pea_onpeak_kwh": 139174.4, "pea_offpeak_kwh": 216474.0, "pea_holiday_kwh": 0.0, "pea_total_kwh": 355648.4, "peak_kw": 876.0, "energy_charge": 1146714.76, "demand_charge": 116446.68, "ft_charge": 57721.74, "pf_penalty": 0.0, "service_charge": 312.24, "total_cost_no_vat": 1321195.42, "output_total": 5262700.0, "note": "บิลปิดงวดประจำเดือนกันยายน 2569 จาก PEA AMR"}};
         let officialBills = JSON.parse(localStorage.getItem('pea_official_bills')) || DEFAULT_BILLS;
 
-        const DEFAULT_TARIFFS = {"2026-09": {"month_key": "2026-09", "month_name": "กันยายน 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}, "2026-10": {"month_key": "2026-10", "month_name": "ตุลาคม 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}};
+        const DEFAULT_TARIFFS = {"2026-09": {"month_key": "2026-09", "month_name": "กันยายน 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}, "2026-10": {"month_key": "2026-10", "month_name": "ตุลาคม 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}, "2026-11": {"month_key": "2026-11", "month_name": "พฤศจิกายน 2569", "on_peak_rate": 4.1839, "off_peak_rate": 2.6037, "ft_rate": 0.1623, "peak_demand_rate": 132.93, "service_charge": 312.24, "pf_rate": 0.0, "cost_per_kg_target": 0.212, "solar_share_target": 24.0, "vat_rate": 0.0}};
         let monthlyTariffs = JSON.parse(localStorage.getItem('monthly_tariffs')) || DEFAULT_TARIFFS;
 
         const DEFAULT_GAS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzQAGJIgIrErVEHZj4ixKdAhNVgxrCnyaKGUGz7bBRwj_EQvaFP3fuuCLEbNBAGSlmW/exec';
@@ -792,6 +800,7 @@
         // Current Calculation Mode: 'daily' or 'bill'
         let currentMode = 'daily';
         let currentTariffMonthKey = '2026-09';
+        let editingOriginalDate = null;
 
         let energyChart = null;
         let efficiencyChart = null;
@@ -802,13 +811,57 @@
             return (saved && saved.trim()) ? saved.trim() : DEFAULT_GAS_WEBHOOK_URL;
         }
 
+        function getDeletedDates() {
+            try {
+                return JSON.parse(localStorage.getItem('energy_deleted_dates') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function addDeletedDate(dStr) {
+            const list = getDeletedDates();
+            if (!list.includes(dStr)) {
+                list.push(dStr);
+                localStorage.setItem('energy_deleted_dates', JSON.stringify(list));
+            }
+        }
+
+        function removeDeletedDate(dStr) {
+            const list = getDeletedDates().filter(x => x !== dStr);
+            localStorage.setItem('energy_deleted_dates', JSON.stringify(list));
+        }
+
+        function getPendingLocalSaves() {
+            try {
+                return JSON.parse(localStorage.getItem('energy_pending_saves') || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function setPendingLocalSave(dStr, record) {
+            const map = getPendingLocalSaves();
+            map[dStr] = { ...record, _savedAt: Date.now() };
+            localStorage.setItem('energy_pending_saves', JSON.stringify(map));
+        }
+
+        function removePendingLocalSave(dStr) {
+            const map = getPendingLocalSaves();
+            if (map[dStr]) {
+                delete map[dStr];
+                localStorage.setItem('energy_pending_saves', JSON.stringify(map));
+            }
+        }
+
         function normalizeDateStr(dateInput) {
             if (!dateInput) return '';
             const strVal = String(dateInput).trim();
-            if (/^\d4-\d2-\d2$/.test(strVal)) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(strVal)) {
                 return strVal;
             }
-            const d = new Date(strVal);
+            const cleaned = strVal.replace(/\s*\(.*\)$/, '').trim();
+            const d = new Date(cleaned);
             if (!isNaN(d.getTime())) {
                 const year = d.getFullYear();
                 const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -821,10 +874,11 @@
         function normalizeMonthKey(keyInput) {
             if (!keyInput) return '';
             const strVal = String(keyInput).trim();
-            if (/^\d4-\d2$/.test(strVal)) {
+            if (/^\d{4}-\d{2}$/.test(strVal)) {
                 return strVal;
             }
-            const d = new Date(strVal);
+            const cleaned = strVal.replace(/\s*\(.*\)$/, '').trim();
+            const d = new Date(cleaned);
             if (!isNaN(d.getTime())) {
                 const year = d.getFullYear();
                 const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -858,7 +912,7 @@
             fetchLiveGoogleSheetData(true);
         }
 
-        // 3. Live Google Sheet Data Fetcher
+        // 3. Live Google Sheet Data Fetcher (Authoritative 2-Way Sync)
         function fetchLiveGoogleSheetData(showNotification) {
             const webhookUrl = getWebhookUrl();
             const indicator = document.getElementById('syncLiveIndicator');
@@ -875,23 +929,73 @@
                 lucide.createIcons();
             }
 
-            fetch(webhookUrl)
+            const fetchUrl = webhookUrl + (webhookUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+
+            fetch(fetchUrl, { cache: 'no-store' })
                 .then(res => res.json())
                 .then(res => {
-                    if (res && res.status === "success" && Array.isArray(res.dataset) && res.dataset.length > 0) {
-                        // Merge Google Sheet records into appData (Avoid duplicate by date)
+                    if (res && res.status === "success" && Array.isArray(res.dataset)) {
+                        const deletedSet = new Set(getDeletedDates());
+                        const isV2Script = res.version === "2.0";
+                        const freshMap = new Map();
+
+                        // 1. โหลดข้อมูลพื้นฐาน ก.ย. 69 (RAW_MASTER_DATA) เฉพาะวันที่ไม่ได้ถูกลบ
+                        RAW_MASTER_DATA.forEach(baseRow => {
+                            const cleanDate = normalizeDateStr(baseRow.date);
+                            if (!cleanDate || deletedSet.has(cleanDate)) return;
+                            freshMap.set(cleanDate, { ...baseRow, date: cleanDate });
+                        });
+
+                        // 2. โหลดข้อมูลสดจาก Google Sheet (หากลบแถวใน Google Sheet ข้อมูลจะหายไปจากเว็บทันที)
                         res.dataset.forEach(rawRow => {
                             if (!rawRow || !rawRow.date) return;
                             const cleanDate = normalizeDateStr(rawRow.date);
                             if (!cleanDate) return;
-                            const row = { ...rawRow, date: cleanDate };
-                            const idx = appData.findIndex(d => d.date === cleanDate);
-                            if (idx >= 0) {
-                                appData[idx] = { ...appData[idx], ...row };
+
+                            // หากใช้สคริปต์ v1 เดิมที่ยังไม่มี delete_daily ให้เช็ค deletedSet
+                            if (!isV2Script && deletedSet.has(cleanDate)) return;
+                            if (isV2Script && cleanDate.startsWith('2026-09') && deletedSet.has(cleanDate)) return;
+
+                            const rawStr = String(rawRow.raw_sheet_date || rawRow.date).trim();
+                            const prev = freshMap.get(cleanDate);
+                            const allRawDates = (prev && Array.isArray(prev.all_raw_sheet_dates))
+                                ? [...prev.all_raw_sheet_dates]
+                                : [];
+                            if (rawStr && !allRawDates.includes(rawStr)) {
+                                allRawDates.push(rawStr);
+                            }
+
+                            freshMap.set(cleanDate, {
+                                ...(prev || {}),
+                                ...rawRow,
+                                date: cleanDate,
+                                raw_sheet_date: (prev && prev.raw_sheet_date) ? prev.raw_sheet_date : rawStr,
+                                all_raw_sheet_dates: allRawDates
+                            });
+                        });
+
+                        // 3. รวมข้อมูลที่เพิ่งกดบันทึกบนเว็บภายใน 15 วินาที (ระหว่างรอ Google Sheet อัปเดต)
+                        const pendingMap = getPendingLocalSaves();
+                        let pendingChanged = false;
+                        Object.keys(pendingMap).forEach(pDate => {
+                            const pItem = pendingMap[pDate];
+                            if (pItem && pItem._savedAt && (Date.now() - pItem._savedAt < 15000)) {
+                                const existing = freshMap.get(pDate) || {};
+                                freshMap.set(pDate, {
+                                    ...existing,
+                                    ...pItem,
+                                    date: pDate,
+                                    raw_sheet_date: existing.raw_sheet_date || pItem.raw_sheet_date || pDate,
+                                    all_raw_sheet_dates: existing.all_raw_sheet_dates || pItem.all_raw_sheet_dates || [pDate]
+                                });
                             } else {
-                                appData.push(row);
+                                delete pendingMap[pDate];
+                                pendingChanged = true;
                             }
                         });
+                        if (pendingChanged) {
+                            localStorage.setItem('energy_pending_saves', JSON.stringify(pendingMap));
+                        }
 
                         // Also merge Tariffs if returned
                         if (res.tariffs && Object.keys(res.tariffs).length > 0) {
@@ -910,7 +1014,7 @@
                             initTariffMonthSelector();
                         }
 
-                        appData.sort((a, b) => a.date.localeCompare(b.date));
+                        appData = Array.from(freshMap.values()).sort((a, b) => a.date.localeCompare(b.date));
                         localStorage.setItem('energy_master_dataset', JSON.stringify(appData));
 
                         if (indicator) {
@@ -1396,10 +1500,15 @@
                     <td class="py-2.5 px-3 text-right text-emerald-400 font-mono font-semibold">${unitPerOut.toFixed(4)}</td>
                     <td class="py-2.5 px-3 text-right font-mono ${costCls}">฿${costPerOut.toFixed(3)}</td>
                     <td class="py-2.5 px-3 text-right text-amber-400 font-mono font-semibold">${solarShare.toFixed(1)}%</td>
-                    <td class="py-2.5 px-3 text-center">
-                        <button onclick="editDailyRecord('${d.date}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-sky-600/30 text-sky-400 border border-slate-700 hover:border-sky-500/40 text-[11px] font-medium transition flex items-center gap-1 mx-auto">
-                            <i data-lucide="edit" class="w-3 h-3"></i> แก้ไข
-                        </button>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editDailyRecord('${d.date}')" title="แก้ไขข้อมูลวันที่ ${d.date}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-sky-600/30 text-sky-400 border border-slate-700 hover:border-sky-500/40 text-[11px] font-medium transition flex items-center gap-1">
+                                <i data-lucide="edit" class="w-3 h-3"></i> แก้ไข
+                            </button>
+                            <button onclick="deleteDailyRecord('${d.date}')" title="ลบข้อมูลวันที่ ${d.date}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-rose-400 border border-slate-700 hover:border-rose-500/40 text-[11px] font-medium transition flex items-center gap-1">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i> ลบ
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1661,6 +1770,9 @@
             } else if (preset === 'oct') {
                 document.getElementById('filterStartDate').value = '2026-10-01';
                 document.getElementById('filterEndDate').value = '2026-10-31';
+            } else if (preset === 'nov') {
+                document.getElementById('filterStartDate').value = '2026-11-01';
+                document.getElementById('filterEndDate').value = '2026-11-30';
             } else if (preset === 'all') {
                 if (appData.length > 0) {
                     document.getElementById('filterStartDate').value = appData[0].date;
@@ -1786,6 +1898,7 @@
         }
 
         function openDataModal() {
+            editingOriginalDate = null;
             document.getElementById('dataModal').classList.remove('hidden');
             document.getElementById('dataModalTitle').textContent = "เพิ่มข้อมูลการใช้ไฟฟ้าและผลผลิตรายวัน";
             document.getElementById('entryDate').value = new Date().toISOString().substring(0, 10);
@@ -1794,9 +1907,12 @@
             document.getElementById('entryPeakKw').value = '';
             document.getElementById('entrySolarUnit').value = '';
             document.getElementById('entryOutputTotal').value = '';
+            const delBtn = document.getElementById('modalDeleteBtn');
+            if (delBtn) delBtn.classList.add('hidden');
         }
 
         function closeDataModal() {
+            editingOriginalDate = null;
             document.getElementById('dataModal').classList.add('hidden');
         }
 
@@ -1804,6 +1920,7 @@
             const item = appData.find(d => d.date === targetDate);
             if (!item) return;
 
+            editingOriginalDate = item.date;
             document.getElementById('dataModal').classList.remove('hidden');
             document.getElementById('dataModalTitle').textContent = `แก้ไขข้อมูลประจำวันที่ ${targetDate}`;
             document.getElementById('entryDate').value = item.date;
@@ -1812,6 +1929,54 @@
             document.getElementById('entryPeakKw').value = item.peak_kw || 0;
             document.getElementById('entrySolarUnit').value = item.solar_unit || 0;
             document.getElementById('entryOutputTotal').value = item.output_total || 0;
+
+            const delBtn = document.getElementById('modalDeleteBtn');
+            if (delBtn) delBtn.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function deleteFromEditModal() {
+            const targetDate = editingOriginalDate || document.getElementById('entryDate').value;
+            if (targetDate) {
+                deleteDailyRecord(targetDate);
+            }
+        }
+
+        function deleteDailyRecord(targetDate) {
+            if (!targetDate) return;
+            const item = appData.find(d => d.date === targetDate);
+            const confirmMsg = `⚠️ ยืนยันการลบข้อมูลประจำวันที่ ${formatThaiDate(targetDate)} (${targetDate})?\n\nข้อมูลจะถูกลบออกจากตารางแดชบอร์ดและซิงค์ลบใน Google Sheet`;
+            if (!confirm(confirmMsg)) return;
+
+            // 1. บันทึกลงรายการวันที่ถูกลบ และเอาออกจากรายการรอซิงค์
+            addDeletedDate(targetDate);
+            removePendingLocalSave(targetDate);
+
+            // 2. ลบออกจาก appData ทันที
+            appData = appData.filter(d => d.date !== targetDate);
+            localStorage.setItem('energy_master_dataset', JSON.stringify(appData));
+
+            // 3. ส่งคำสั่งลบไปยัง Google Sheet Webhook
+            const rawDates = (item && Array.isArray(item.all_raw_sheet_dates) && item.all_raw_sheet_dates.length > 0)
+                ? item.all_raw_sheet_dates
+                : [item && item.raw_sheet_date ? item.raw_sheet_date : targetDate];
+
+            Promise.all(rawDates.map(rawD => sendToGoogleSheetWebhook({
+                action: 'delete_daily',
+                date: targetDate,
+                clean_date: targetDate,
+                raw_date: rawD
+            }))).then(results => {
+                const firstRes = results && results[0];
+                if (firstRes && firstRes.status === 'success' && typeof firstRes.deleted === 'number' && !targetDate.startsWith('2026-09')) {
+                    // ลบแถวจริงใน Google Sheet เรียบร้อยแล้ว
+                    removeDeletedDate(targetDate);
+                }
+                setTimeout(() => fetchLiveGoogleSheetData(false), 600);
+            });
+
+            closeDataModal();
+            applyFilters();
         }
 
         function saveDailyRecord(e) {
@@ -1823,9 +1988,27 @@
             const sKwh = parseFloat(document.getElementById('entrySolarUnit').value) || 0;
             const outTot = parseFloat(document.getElementById('entryOutputTotal').value) || 0;
 
-            const existingIdx = appData.findIndex(d => d.date === dStr);
+            const lookupDate = editingOriginalDate || dStr;
+            const existingIdx = appData.findIndex(d => d.date === lookupDate);
+            const existingItem = existingIdx >= 0 ? appData[existingIdx] : appData.find(d => d.date === dStr);
+
+            // หากเคยถูกลบมาก่อน ให้ปลดล็อค
+            removeDeletedDate(dStr);
+            if (editingOriginalDate && editingOriginalDate !== dStr) {
+                addDeletedDate(editingOriginalDate);
+                removePendingLocalSave(editingOriginalDate);
+            }
+
+            // เก็บ raw_sheet_date เดิมไว้เพื่อให้ตรงกับค่าใน Google Sheet 100% (รองรับทั้ง Apps Script v1 และ v2)
+            const rawDatesToUpdate = (existingItem && existingItem.date === dStr && Array.isArray(existingItem.all_raw_sheet_dates) && existingItem.all_raw_sheet_dates.length > 0)
+                ? existingItem.all_raw_sheet_dates
+                : [(existingItem && existingItem.date === dStr && existingItem.raw_sheet_date) ? existingItem.raw_sheet_date : dStr];
+
             const record = {
+                ...(existingItem || {}),
                 date: dStr,
+                raw_sheet_date: rawDatesToUpdate[0],
+                all_raw_sheet_dates: rawDatesToUpdate,
                 pea_onpeak_kwh: onKwh,
                 pea_offpeak_kwh: offKwh,
                 pea_holiday_kwh: 0,
@@ -1837,7 +2020,9 @@
             };
 
             if (existingIdx >= 0) {
-                appData[existingIdx] = { ...appData[existingIdx], ...record };
+                appData[existingIdx] = record;
+                // หากเปลี่ยนวันที่และมีแถวซ้ำ ให้กรองให้เหลือรายการเดียว
+                appData = appData.filter((item, idx) => idx === existingIdx || item.date !== dStr);
             } else {
                 appData.push(record);
             }
@@ -1845,6 +2030,7 @@
             // Sort all data by date
             appData.sort((a, b) => a.date.localeCompare(b.date));
             localStorage.setItem('energy_master_dataset', JSON.stringify(appData));
+            setPendingLocalSave(dStr, record);
 
             // Auto-adjust date filter if saved date is outside current range
             const currentStart = document.getElementById('filterStartDate').value;
@@ -1874,9 +2060,22 @@
             const costPerOut = outTot > 0 ? (dayCost / outTot) : 0;
             const solarShare = (onKwh + offKwh + sKwh) > 0 ? ((sKwh / (onKwh + offKwh + sKwh)) * 100) : 0;
 
-            sendToGoogleSheetWebhook({
+            // หากเปลี่ยนวันที่จากวันอื่น ให้ส่งคำสั่งลบวันเดิมด้วย
+            if (editingOriginalDate && editingOriginalDate !== dStr && existingItem) {
+                sendToGoogleSheetWebhook({
+                    action: 'delete_daily',
+                    date: editingOriginalDate,
+                    clean_date: editingOriginalDate,
+                    raw_date: existingItem.raw_sheet_date || editingOriginalDate
+                });
+            }
+
+            // ส่งอัปเดตทุก raw_sheet_date ของวันนั้นเพื่อให้เปลี่ยนค่าใน Google Sheet ทันที 100%
+            Promise.all(rawDatesToUpdate.map(rawD => sendToGoogleSheetWebhook({
                 action: 'save_daily',
-                date: dStr,
+                date: rawD,
+                clean_date: dStr,
+                original_date: lookupDate,
                 pea_onpeak_kwh: onKwh,
                 pea_offpeak_kwh: offKwh,
                 pea_total_kwh: onKwh + offKwh,
@@ -1887,26 +2086,57 @@
                 unit_per_output: unitPerOut.toFixed(4),
                 cost_per_output: costPerOut.toFixed(4),
                 solar_ratio: solarShare.toFixed(2)
+            }))).then(() => {
+                setTimeout(() => fetchLiveGoogleSheetData(false), 600);
             });
 
             closeDataModal();
             applyFilters();
-            alert(`✅ บันทึกข้อมูลวันที่ ${dStr} สำเร็จและอัปเดตแดชบอร์ดเรียบร้อย!`);
+            alert(`✅ บันทึกข้อมูลวันที่ ${dStr} สำเร็จและซิงค์อัปเดตลง Google Sheet เรียบร้อย!`);
         }
 
         function sendToGoogleSheetWebhook(payload) {
             const webhookUrl = getWebhookUrl();
-            if (!webhookUrl || !webhookUrl.startsWith('http')) return;
+            if (!webhookUrl || !webhookUrl.startsWith('http')) {
+                return Promise.resolve(null);
+            }
 
-            fetch(webhookUrl, {
+            const indicator = document.getElementById('syncLiveIndicator');
+            if (indicator) {
+                indicator.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-sky-400"></i> กำลังซิงค์ลง Google Sheet...';
+                lucide.createIcons();
+            }
+
+            // ใช้ Content-Type: text/plain;charset=utf-8 ซึ่งเป็น CORS-safelisted header
+            // ทำให้ Google Apps Script รับข้อมูล POST และส่งผลลัพธ์ JSON กลับมาได้โดยไม่ติด CORS preflight
+            return fetch(webhookUrl, {
                 method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
-            }).then(() => {
-                console.log("Auto-synced to Google Sheet Webhook");
-            }).catch(err => {
-                console.warn("Could not sync to Webhook:", err);
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Synced to Google Sheet Webhook:", data);
+                if (indicator) {
+                    indicator.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> ซิงค์ Google Sheet สำเร็จ (${appData.length} วัน)`;
+                    lucide.createIcons();
+                }
+                return data;
+            })
+            .catch(err => {
+                console.warn("Webhook CORS fallback:", err);
+                return fetch(webhookUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    if (indicator) {
+                        indicator.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> ส่งข้อมูลไป Google Sheet แล้ว`;
+                        lucide.createIcons();
+                    }
+                    return { status: 'opaque' };
+                });
             });
         }
 
